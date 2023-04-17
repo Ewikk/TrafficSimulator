@@ -137,7 +137,6 @@ namespace TrafficSimulator
                 if (!roadStructure.ContainsKey(line.start))
                 {
                     roadStructure.Add(line.start, new List<Point>());
-
                 }
                 roadStructure[line.start].Add(line.end);
             }
@@ -179,8 +178,8 @@ namespace TrafficSimulator
                     string[] instructions = dValue.Split(' ');
                     string[] styles = style.Split(';');
                     string brush = Array.Find(styles, brush => brush.Contains("stroke-width:"));
-                    double brushWidth = 5;
-                    //double brushWidth = Convert.ToDouble(brush.Split(":")[1]);
+                    //double brushWidth = 5;
+                    double brushWidth = Convert.ToDouble(brush.Split(":")[1]);
                     string[] startPoint = instructions[1].Split(',');
                     string[] endPoint = instructions[instructions.Length - 1].Split(',');
                     Console.WriteLine(instructions[0]);
