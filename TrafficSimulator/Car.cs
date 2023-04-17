@@ -19,6 +19,7 @@ namespace TrafficSimulator
         private Point destination;
         private Point posCopy;
         private Point destCopy;
+        public Point Size;
         public Color color = Color.Blue;
         private Stopwatch stopwatch = new Stopwatch();
         public Car(int xPos, int yPos, float xSpeed, float ySpeed)
@@ -69,12 +70,18 @@ namespace TrafficSimulator
                             speedVect.X = Math.Sign(destination.X - position.X) * speed;
                             position.X += Math.Sign(destination.X - position.X) * distance;
                             speedVect.Y = 0;
+
+                            Size.X = 40;
+                            Size.Y = 20;
                         }
                         else
                         {
                             speedVect.X = 0;
                             speedVect.Y = Math.Sign(destination.Y - position.Y) * speed;
                             position.Y += Math.Sign(destination.Y - position.Y) * distance;
+
+                            Size.X = 20;
+                            Size.Y = 40;
                         }
                     }
                     catch

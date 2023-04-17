@@ -92,7 +92,7 @@ namespace TrafficSimulator
             _spriteBatch.Begin();
             foreach (Car car in cars)
             {
-                _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10, car.position.Y - 10, 20, 20), car.color);
+                _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10, car.position.Y - 10, car.Size.X, car.Size.Y), car.color);
             }
             _spriteBatch.End();
             base.Draw(gameTime);
