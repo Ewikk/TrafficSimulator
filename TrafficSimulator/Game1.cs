@@ -46,8 +46,9 @@ namespace TrafficSimulator
             _graphics = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
-            _graphics.PreferredBackBufferWidth = 1600;
-            _graphics.PreferredBackBufferHeight = 1600 * 9 / 16;
+            _graphics.PreferredBackBufferWidth = 1450;
+            _graphics.PreferredBackBufferHeight = 750;
+            //_graphics.PreferredBackBufferHeight = 1600 * 9 / 16;
             //_graphics.IsFullScreen = true;
             _graphics.ApplyChanges();
         }
