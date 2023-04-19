@@ -171,6 +171,66 @@ namespace TrafficSimulator
             }
         }
 
+        private void ReadData(XmlNodeList pathNodeList)
+        {
+            foreach (XmlNode pathNode in pathNodeList)
+            {
+
+                XmlAttribute dAttribute = pathNode.Attributes["d"];
+                XmlAttribute styleAttribute = pathNode.Attributes["style"];
+                if (dAttribute != null)
+                {
+                    string dValue = dAttribute.Value;
+                    string style = styleAttribute.Value;
+                    string[] instructions = dValue.Split(' ');
+                    string[] styles = style.Split(';');
+                    string brush = Array.Find(styles, brush => brush.Contains("stroke-width:"));
+                    String sd = brush.Split(":")[1];
+                    double brushWidth = Convert.ToDouble(sd);
+
+                    Console.WriteLine(sd);
+                    string[] startPoint = instructions[1].Split(',');
+                    string[] endPoint = instructions[instructions.Length - 1].Split(',');
+                    Console.WriteLine(instructions[0]);
+                    Console.WriteLine(startPoint[0]);
+                    Console.WriteLine(endPoint[0]);
+                    startPoint[0] = startPoint[0].Replace('.', ',');
+                    startPoint[1] = startPoint[1].Replace('.', ',');
+                    endPoint[0] = endPoint[0].Replace('.', ',');
+                    double startX, startY, endX = -1, endY = -1;
+                    startX = Convert.ToDouble(startPoint[0]);
+                    startY = Convert.ToDouble(startPoint[1]);
+                    if (Array.Find(instructions, element => element.Equals("V")) != null)
+                    {
+                        endX = startX;
+                        endY = Convert.ToDouble(endPoint[0]);
+                    }
+                    else if (Array.Find(instructions, element => element.Equals("v")) != null)
+                    {
+                        endX = startX;
+                        double offsetY = Convert.ToDouble(endPoint[0]);
+                        endY = startY + offsetY;
+                    }
+                    else if (Array.Find(instructions, element => element.Equals("H")) != null)
+                    {
+                        endX = Convert.ToDouble(endPoint[0]);
+                        endY = startY;
+                    }
+                    else if (Array.Find(instructions, element => element.Equals("h")) != null)
+                    {
+                        double offsetX = Convert.ToDouble(endPoint[0]);
+                        endX = startX + offsetX;
+                        endY = startY;
+                    }
+                    else { continue; };
+                    addRoad(startX, startY, endX, endY, brushWidth);
+                }
+                else
+                {
+                    Console.WriteLine("Path was not found in SVG");
+                }
+            }
+        }
 
         private void ReadSVG()
         {
@@ -180,118 +240,8 @@ namespace TrafficSimulator
             XmlNamespaceManager nsMgr = new XmlNamespaceManager(doc.NameTable);
             nsMgr.AddNamespace("svg", "http://www.w3.org/2000/svg");
 
-            XmlNodeList pathNodeList = doc.SelectNodes("//svg:g[@id='layer1']/svg:path", nsMgr);
-            foreach (XmlNode pathNode in pathNodeList)
-            {
-
-                XmlAttribute dAttribute = pathNode.Attributes["d"];
-                XmlAttribute styleAttribute = pathNode.Attributes["style"];
-                if (dAttribute != null)
-                {
-                    string dValue = dAttribute.Value;
-                    string style = styleAttribute.Value;
-                    string[] instructions = dValue.Split(' ');
-                    string[] styles = style.Split(';');
-                    string brush = Array.Find(styles, brush => brush.Contains("stroke-width:"));
-                    double brushWidth = 5;
-                    //double brushWidth = Convert.ToDouble(brush.Split(":")[1]);
-                    string[] startPoint = instructions[1].Split(',');
-                    string[] endPoint = instructions[instructions.Length - 1].Split(',');
-                    Console.WriteLine(instructions[0]);
-                    Console.WriteLine(startPoint[0]);
-                    Console.WriteLine(endPoint[0]);
-                    startPoint[0] = startPoint[0].Replace('.', ',');
-                    startPoint[1] = startPoint[1].Replace('.', ',');
-                    endPoint[0] = endPoint[0].Replace('.', ',');
-                    double startX, startY, endX = -1, endY = -1;
-                    startX = Convert.ToDouble(startPoint[0]);
-                    startY = Convert.ToDouble(startPoint[1]);
-                    if (Array.Find(instructions, element => element.Equals("V")) != null)
-                    {
-                        endX = startX;
-                        endY = Convert.ToDouble(endPoint[0]);
-                    }
-                    else if (Array.Find(instructions, element => element.Equals("v")) != null)
-                    {
-                        endX = startX;
-                        double offsetY = Convert.ToDouble(endPoint[0]);
-                        endY = startY + offsetY;
-                    }
-                    else if (Array.Find(instructions, element => element.Equals("H")) != null)
-                    {
-                        endX = Convert.ToDouble(endPoint[0]);
-                        endY = startY;
-                    }
-                    else if (Array.Find(instructions, element => element.Equals("h")) != null)
-                    {
-                        double offsetX = Convert.ToDouble(endPoint[0]);
-                        endX = startX + offsetX;
-                        endY = startY;
-                    }
-                    else { continue; };
-                    addRoad(startX, startY, endX, endY, brushWidth);
-                }
-                else
-                {
-                    Console.WriteLine("Path was not found in SVG");
-                }
-            }
-            pathNodeList = doc.SelectNodes("//svg:g[@id='layer5']/svg:path", nsMgr);
-            foreach (XmlNode pathNode in pathNodeList)
-            {
-
-                XmlAttribute dAttribute = pathNode.Attributes["d"];
-                XmlAttribute styleAttribute = pathNode.Attributes["style"];
-                if (dAttribute != null)
-                {
-                    string dValue = dAttribute.Value;
-                    string style = styleAttribute.Value;
-                    string[] instructions = dValue.Split(' ');
-                    string[] styles = style.Split(';');
-                    string brush = Array.Find(styles, brush => brush.Contains("stroke-width:"));
-                    double brushWidth = 2;
-                    //double brushWidth = Convert.ToDouble(brush.Split(":")[1]);
-                    string[] startPoint = instructions[1].Split(',');
-                    string[] endPoint = instructions[instructions.Length - 1].Split(',');
-                    Console.WriteLine(instructions[0]);
-                    Console.WriteLine(startPoint[0]);
-                    Console.WriteLine(endPoint[0]);
-                    startPoint[0] = startPoint[0].Replace('.', ',');
-                    startPoint[1] = startPoint[1].Replace('.', ',');
-                    endPoint[0] = endPoint[0].Replace('.', ',');
-                    double startX, startY, endX = -1, endY = -1;
-                    startX = Convert.ToDouble(startPoint[0]);
-                    startY = Convert.ToDouble(startPoint[1]);
-                    if (Array.Find(instructions, element => element.Equals("V")) != null)
-                    {
-                        endX = startX;
-                        endY = Convert.ToDouble(endPoint[0]);
-                    }
-                    else if (Array.Find(instructions, element => element.Equals("v")) != null)
-                    {
-                        endX = startX;
-                        double offsetY = Convert.ToDouble(endPoint[0]);
-                        endY = startY + offsetY;
-                    }
-                    else if (Array.Find(instructions, element => element.Equals("H")) != null)
-                    {
-                        endX = Convert.ToDouble(endPoint[0]);
-                        endY = startY;
-                    }
-                    else if (Array.Find(instructions, element => element.Equals("h")) != null)
-                    {
-                        double offsetX = Convert.ToDouble(endPoint[0]);
-                        endX = startX + offsetX;
-                        endY = startY;
-                    }
-                    else { continue; };
-                    addRoad(startX, startY, endX, endY, brushWidth);
-                }
-                else
-                {
-                    Console.WriteLine("Path was not found in SVG");
-                }
-            }
+            ReadData(doc.SelectNodes("//svg:g[@id='layer1']/svg:path", nsMgr));
+            ReadData(doc.SelectNodes("//svg:g[@id='layer5']/svg:path", nsMgr));
         }
 
         private void addRoad(double startX, double startY, double endX, double endY, double brushWidth)
