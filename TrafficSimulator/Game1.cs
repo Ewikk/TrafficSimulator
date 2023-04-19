@@ -32,10 +32,13 @@ namespace TrafficSimulator
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
         private SpriteBatch _roadsBatch;
+        private SpriteBatch _sidewalksBatch;
         private List<Rectangle> roadList = new List<Rectangle>();
+        private List<Rectangle> sidewalkList = new List<Rectangle>();
         private List<Line> lineList = new List<Line>();
         private Texture2D rect; //Texture used to draw rectangles
         private Dictionary<Point, List<Point>> roadStructure = new Dictionary<Point, List<Point>>();
+        private Dictionary<Point, List<Point>> sidewalkStructure = new Dictionary<Point, List<Point>>();
         private const string svgPath = "..\\..\\..\\final.svg";
         private const double scale = 7;
         public Game1()
@@ -69,6 +72,7 @@ namespace TrafficSimulator
         {
             _spriteBatch = new SpriteBatch(GraphicsDevice);
             _roadsBatch = new SpriteBatch(GraphicsDevice);
+            _sidewalksBatch = new SpriteBatch(GraphicsDevice);
             rect = new Texture2D(_graphics.GraphicsDevice, 1, 1);
             rect.SetData(new[] { Color.White });
             // TODO: use this.Content to load your game content here
@@ -89,6 +93,7 @@ namespace TrafficSimulator
             GraphicsDevice.Clear(Color.CornflowerBlue);
             // TODO: Add your drawing code here
             DrawRoads();
+            DrawSidewalks();
             _spriteBatch.Begin();
             foreach (Car car in cars)
             {
@@ -130,6 +135,16 @@ namespace TrafficSimulator
             _roadsBatch.End();
         }
 
+        private void DrawSidewalks()
+        {
+            _sidewalksBatch.Begin();
+            foreach (Rectangle coords in sidewalkList)
+            {
+                _sidewalksBatch.Draw(rect, coords, Color.Gray);
+            }
+            _sidewalksBatch.End();
+        }
+
         private void createRoadStructure()
         {
             foreach (Line line in lineList)
@@ -165,7 +180,7 @@ namespace TrafficSimulator
             XmlNamespaceManager nsMgr = new XmlNamespaceManager(doc.NameTable);
             nsMgr.AddNamespace("svg", "http://www.w3.org/2000/svg");
 
-            XmlNodeList pathNodeList = doc.SelectNodes("//svg:path", nsMgr);
+            XmlNodeList pathNodeList = doc.SelectNodes("//svg:g[@id='layer1']/svg:path", nsMgr);
             foreach (XmlNode pathNode in pathNodeList)
             {
 
@@ -178,8 +193,64 @@ namespace TrafficSimulator
                     string[] instructions = dValue.Split(' ');
                     string[] styles = style.Split(';');
                     string brush = Array.Find(styles, brush => brush.Contains("stroke-width:"));
-                    //double brushWidth = 5;
-                    double brushWidth = Convert.ToDouble(brush.Split(":")[1]);
+                    double brushWidth = 5;
+                    //double brushWidth = Convert.ToDouble(brush.Split(":")[1]);
+                    string[] startPoint = instructions[1].Split(',');
+                    string[] endPoint = instructions[instructions.Length - 1].Split(',');
+                    Console.WriteLine(instructions[0]);
+                    Console.WriteLine(startPoint[0]);
+                    Console.WriteLine(endPoint[0]);
+                    startPoint[0] = startPoint[0].Replace('.', ',');
+                    startPoint[1] = startPoint[1].Replace('.', ',');
+                    endPoint[0] = endPoint[0].Replace('.', ',');
+                    double startX, startY, endX = -1, endY = -1;
+                    startX = Convert.ToDouble(startPoint[0]);
+                    startY = Convert.ToDouble(startPoint[1]);
+                    if (Array.Find(instructions, element => element.Equals("V")) != null)
+                    {
+                        endX = startX;
+                        endY = Convert.ToDouble(endPoint[0]);
+                    }
+                    else if (Array.Find(instructions, element => element.Equals("v")) != null)
+                    {
+                        endX = startX;
+                        double offsetY = Convert.ToDouble(endPoint[0]);
+                        endY = startY + offsetY;
+                    }
+                    else if (Array.Find(instructions, element => element.Equals("H")) != null)
+                    {
+                        endX = Convert.ToDouble(endPoint[0]);
+                        endY = startY;
+                    }
+                    else if (Array.Find(instructions, element => element.Equals("h")) != null)
+                    {
+                        double offsetX = Convert.ToDouble(endPoint[0]);
+                        endX = startX + offsetX;
+                        endY = startY;
+                    }
+                    else { continue; };
+                    addRoad(startX, startY, endX, endY, brushWidth);
+                }
+                else
+                {
+                    Console.WriteLine("Path was not found in SVG");
+                }
+            }
+            pathNodeList = doc.SelectNodes("//svg:g[@id='layer5']/svg:path", nsMgr);
+            foreach (XmlNode pathNode in pathNodeList)
+            {
+
+                XmlAttribute dAttribute = pathNode.Attributes["d"];
+                XmlAttribute styleAttribute = pathNode.Attributes["style"];
+                if (dAttribute != null)
+                {
+                    string dValue = dAttribute.Value;
+                    string style = styleAttribute.Value;
+                    string[] instructions = dValue.Split(' ');
+                    string[] styles = style.Split(';');
+                    string brush = Array.Find(styles, brush => brush.Contains("stroke-width:"));
+                    double brushWidth = 2;
+                    //double brushWidth = Convert.ToDouble(brush.Split(":")[1]);
                     string[] startPoint = instructions[1].Split(',');
                     string[] endPoint = instructions[instructions.Length - 1].Split(',');
                     Console.WriteLine(instructions[0]);
@@ -249,7 +320,15 @@ namespace TrafficSimulator
                 else
                     coords = new Rectangle((int)(startX - brushWidth / 2), (int)(startY - brushWidth / 2), (int)(endX - startX + brushWidth), (int)(endY - startY + brushWidth));
             }
-            roadList.Add(coords);
+
+            if (brushWidth == 35)
+            {
+                roadList.Add(coords);
+            }
+            else if (brushWidth == 14)
+            {
+                sidewalkList.Add(coords);
+            }
             lineList.Add(new Line((int)startX, (int)startY, (int)endX, (int)endY));
         }
     }
