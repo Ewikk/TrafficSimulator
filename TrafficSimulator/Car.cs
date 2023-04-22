@@ -33,11 +33,25 @@ namespace TrafficSimulator
             destCopy = destination;
             speedVectCopy = speedVect;
             stopwatch.Start();
+            rotate();
+
         }
 
         public void setDestination(Point dest)
         {
             destination = dest;
+        }
+
+        public void rotate()
+        {
+            if(speedVect.X == 0){
+                Size.X = 20;
+                Size.Y = 40;
+            }
+            else{ 
+                Size.X = 40;
+                Size.Y = 20;
+            }
         }
 
         public void Move(Dictionary<Point, List<Point>> roadStructure)
@@ -65,24 +79,20 @@ namespace TrafficSimulator
                         position = destination;
                         destination = newDestination;
 
+
                         if (position.X != destination.X)
                         {
                             speedVect.X = Math.Sign(destination.X - position.X) * speed;
                             position.X += Math.Sign(destination.X - position.X) * distance;
                             speedVect.Y = 0;
-
-                            Size.X = 40;
-                            Size.Y = 20;
                         }
                         else
                         {
                             speedVect.X = 0;
                             speedVect.Y = Math.Sign(destination.Y - position.Y) * speed;
                             position.Y += Math.Sign(destination.Y - position.Y) * distance;
-
-                            Size.X = 20;
-                            Size.Y = 40;
                         }
+                        rotate();
                     }
                     catch
                     {

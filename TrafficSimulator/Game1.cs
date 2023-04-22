@@ -13,6 +13,9 @@ using System.Linq;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Collections;
+using SharpDX.MediaFoundation;
+
 
 namespace TrafficSimulator
 {
@@ -34,13 +37,14 @@ namespace TrafficSimulator
         private SpriteBatch _roadsBatch;
         private SpriteBatch _sidewalksBatch;
         private List<Rectangle> roadList = new List<Rectangle>();
+        private List<Point> bounderyPoints = new List<Point>();
         private List<Rectangle> sidewalkList = new List<Rectangle>();
         private List<Line> lineList = new List<Line>();
         private Texture2D rect; //Texture used to draw rectangles
         private Dictionary<Point, List<Point>> roadStructure = new Dictionary<Point, List<Point>>();
         private Dictionary<Point, List<Point>> sidewalkStructure = new Dictionary<Point, List<Point>>();
         private const string svgPath = "..\\..\\..\\final.svg";
-        private const double scale = 7;
+        private const int scale = 7;
         public Game1()
         {
             _graphics = new GraphicsDeviceManager(this);
@@ -58,6 +62,11 @@ namespace TrafficSimulator
             // TODO: Add your initialization logic here
             base.Initialize();
             ReadSVG();
+            Console.WriteLine("zaczynam pisac");
+            foreach (Point punkt in bounderyPoints)
+            {
+                Console.WriteLine(punkt.X + " " + punkt.Y);
+            }
             createRoadStructure();
             printRoadStructure();
             setupCars();
@@ -108,7 +117,15 @@ namespace TrafficSimulator
 
         private void setupCars()
         {
-            float speed = 1000;
+            float speed = 150;
+            /*            Random random = new Random();
+                        for (int i = 0; i < 5; i++)
+                        {
+                            cars[i] = new Car(bounderyPoints[i].X, bounderyPoints[i].Y, speed, speed);
+                            cars[i].setDestination(roadStructure[cars[i].position].First());
+                            Color randomColor = new Color(random.Next(256), random.Next(256), random.Next(256));
+                            cars[i].color = randomColor;
+                        }*/
             cars[0] = new Car(811, 832, 0, -speed);
             cars[0].setDestination(roadStructure[cars[0].position].First());
             cars[1] = new Car(735, 832, 0, -speed);
@@ -173,15 +190,8 @@ namespace TrafficSimulator
         }
 
 
-        private void ReadSVG()
+        private void ReadData(XmlNodeList pathNodeList)
         {
-            XmlDocument doc = new XmlDocument();
-            doc.Load(svgPath);
-
-            XmlNamespaceManager nsMgr = new XmlNamespaceManager(doc.NameTable);
-            nsMgr.AddNamespace("svg", "http://www.w3.org/2000/svg");
-
-            XmlNodeList pathNodeList = doc.SelectNodes("//svg:g[@id='layer1']/svg:path", nsMgr);
             foreach (XmlNode pathNode in pathNodeList)
             {
 
@@ -194,16 +204,20 @@ namespace TrafficSimulator
                     string[] instructions = dValue.Split(' ');
                     string[] styles = style.Split(';');
                     string brush = Array.Find(styles, brush => brush.Contains("stroke-width:"));
-                    double brushWidth = 5;
-                    //double brushWidth = Convert.ToDouble(brush.Split(":")[1]);
+                    String sd = brush.Split(":")[1];
+                    double brushWidth = Convert.ToDouble(sd);
+
+                    /*                    Console.WriteLine(sd);*/
                     string[] startPoint = instructions[1].Split(',');
                     string[] endPoint = instructions[instructions.Length - 1].Split(',');
-                    Console.WriteLine(instructions[0]);
-                    Console.WriteLine(startPoint[0]);
-                    Console.WriteLine(endPoint[0]);
+                    /*                    Console.WriteLine(instructions[0]);
+                                        Console.WriteLine(startPoint[0]);
+                                        Console.WriteLine(endPoint[0]);*/
                     startPoint[0] = startPoint[0].Replace('.', ',');
                     startPoint[1] = startPoint[1].Replace('.', ',');
                     endPoint[0] = endPoint[0].Replace('.', ',');
+
+
                     double startX, startY, endX = -1, endY = -1;
                     startX = Convert.ToDouble(startPoint[0]);
                     startY = Convert.ToDouble(startPoint[1]);
@@ -230,63 +244,28 @@ namespace TrafficSimulator
                         endY = startY;
                     }
                     else { continue; };
-                    addRoad(startX, startY, endX, endY, brushWidth);
-                }
-                else
-                {
-                    Console.WriteLine("Path was not found in SVG");
-                }
-            }
-            pathNodeList = doc.SelectNodes("//svg:g[@id='layer5']/svg:path", nsMgr);
-            foreach (XmlNode pathNode in pathNodeList)
-            {
+                    startX *= scale;
+                    startY *= scale;
+                    endX *= scale;
+                    endY *= scale;
 
-                XmlAttribute dAttribute = pathNode.Attributes["d"];
-                XmlAttribute styleAttribute = pathNode.Attributes["style"];
-                if (dAttribute != null)
-                {
-                    string dValue = dAttribute.Value;
-                    string style = styleAttribute.Value;
-                    string[] instructions = dValue.Split(' ');
-                    string[] styles = style.Split(';');
-                    string brush = Array.Find(styles, brush => brush.Contains("stroke-width:"));
-                    double brushWidth = 2;
-                    //double brushWidth = Convert.ToDouble(brush.Split(":")[1]);
-                    string[] startPoint = instructions[1].Split(',');
-                    string[] endPoint = instructions[instructions.Length - 1].Split(',');
-                    Console.WriteLine(instructions[0]);
-                    Console.WriteLine(startPoint[0]);
-                    Console.WriteLine(endPoint[0]);
-                    startPoint[0] = startPoint[0].Replace('.', ',');
-                    startPoint[1] = startPoint[1].Replace('.', ',');
-                    endPoint[0] = endPoint[0].Replace('.', ',');
-                    double startX, startY, endX = -1, endY = -1;
-                    startX = Convert.ToDouble(startPoint[0]);
-                    startY = Convert.ToDouble(startPoint[1]);
-                    if (Array.Find(instructions, element => element.Equals("V")) != null)
+                    startX = Math.Round(startX, 0);
+                    startY = Math.Round(startY, 0);
+                    endX = Math.Round(endX, 0);
+                    endY = Math.Round(endY, 0);
+
+                    Point startP = new Point((int)startX, (int)startY);
+                    Point endP = new Point((int)endX, (int)endY);
+
+                    if (!bounderyPoints.Contains(startP))
                     {
-                        endX = startX;
-                        endY = Convert.ToDouble(endPoint[0]);
+                        bounderyPoints.Add(startP);
                     }
-                    else if (Array.Find(instructions, element => element.Equals("v")) != null)
+                    if (!bounderyPoints.Contains(endP))
                     {
-                        endX = startX;
-                        double offsetY = Convert.ToDouble(endPoint[0]);
-                        endY = startY + offsetY;
+                        bounderyPoints.Add(endP);
                     }
-                    else if (Array.Find(instructions, element => element.Equals("H")) != null)
-                    {
-                        endX = Convert.ToDouble(endPoint[0]);
-                        endY = startY;
-                    }
-                    else if (Array.Find(instructions, element => element.Equals("h")) != null)
-                    {
-                        double offsetX = Convert.ToDouble(endPoint[0]);
-                        endX = startX + offsetX;
-                        endY = startY;
-                    }
-                    else { continue; };
-                    addRoad(startX, startY, endX, endY, brushWidth);
+                    addRoad(startP, endP, brushWidth);
                 }
                 else
                 {
@@ -295,31 +274,35 @@ namespace TrafficSimulator
             }
         }
 
-        private void addRoad(double startX, double startY, double endX, double endY, double brushWidth)
+        private void ReadSVG()
         {
-            startX *= scale;
-            startY *= scale;
-            endX *= scale;
-            endY *= scale;
-            startX = Math.Round(startX, 0);
-            startY = Math.Round(startY, 0);
-            endX = Math.Round(endX, 0);
-            endY = Math.Round(endY, 0);
+            XmlDocument doc = new XmlDocument();
+            doc.Load(svgPath);
+
+            XmlNamespaceManager nsMgr = new XmlNamespaceManager(doc.NameTable);
+            nsMgr.AddNamespace("svg", "http://www.w3.org/2000/svg");
+
+            ReadData(doc.SelectNodes("//svg:g[@id='layer1']/svg:path", nsMgr));
+            ReadData(doc.SelectNodes("//svg:g[@id='layer5']/svg:path", nsMgr));
+        }
+
+        private void addRoad(Point start, Point end, double brushWidth)
+        {
             brushWidth *= 7;
             Rectangle coords;
-            if (startX > endX || startY > endY)
+            if (start.X > end.X || start.Y > end.Y)
             {
-                if (startX > endX)
-                    coords = new Rectangle((int)(endX - brushWidth / 2), (int)(endY - brushWidth / 2), (int)(startX - endX + brushWidth), (int)(startY - endY + brushWidth));
+                if (start.X > end.X)
+                    coords = new Rectangle((int)(end.X - brushWidth / 2), (int)(end.Y - brushWidth / 2), (int)(start.X - end.X + brushWidth), (int)(start.Y - end.Y + brushWidth));
                 else
-                    coords = new Rectangle((int)(endX - brushWidth / 2), (int)(endY - brushWidth / 2), (int)(startX - endX + brushWidth), (int)(startY - endY + brushWidth));
+                    coords = new Rectangle((int)(end.X - brushWidth / 2), (int)(end.Y - brushWidth / 2), (int)(start.X - end.X + brushWidth), (int)(start.Y - end.Y + brushWidth));
             }
             else
             {
-                if (endX > startX)
-                    coords = new Rectangle((int)(startX - brushWidth / 2), (int)(startY - brushWidth / 2), (int)(endX - startX + brushWidth), (int)(endY - startY + brushWidth));
+                if (end.X > start.X)
+                    coords = new Rectangle((int)(start.X - brushWidth / 2), (int)(start.Y - brushWidth / 2), (int)(end.X - start.X + brushWidth), (int)(end.Y - start.Y + brushWidth));
                 else
-                    coords = new Rectangle((int)(startX - brushWidth / 2), (int)(startY - brushWidth / 2), (int)(endX - startX + brushWidth), (int)(endY - startY + brushWidth));
+                    coords = new Rectangle((int)(start.X - brushWidth / 2), (int)(start.Y - brushWidth / 2), (int)(end.X - start.X + brushWidth), (int)(end.Y - start.Y + brushWidth));
             }
 
             if (brushWidth == 35)
@@ -330,7 +313,7 @@ namespace TrafficSimulator
             {
                 sidewalkList.Add(coords);
             }
-            lineList.Add(new Line((int)startX, (int)startY, (int)endX, (int)endY));
+            lineList.Add(new Line((int)start.X, (int)start.Y, (int)end.X, (int)end.Y));
         }
     }
 }
