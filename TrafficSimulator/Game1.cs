@@ -15,6 +15,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Collections;
 using SharpDX.MediaFoundation;
+//using System.Drawing;
 
 
 namespace TrafficSimulator
@@ -30,6 +31,25 @@ namespace TrafficSimulator
         }
 
     }
+
+    public struct CarSetup
+    {
+        public int startX;
+        public int startY;
+
+        public float velocityX;
+        public float velocityY;
+
+        public CarSetup(int sX, int sY, float vX, float vY)
+        {
+            startX = sX;
+            startY = sY;
+            velocityX = vX;
+            velocityY = vY;
+        }
+
+    }
+
     public class Game1 : Game
     {
         private GraphicsDeviceManager _graphics;
@@ -51,8 +71,8 @@ namespace TrafficSimulator
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
             _graphics.PreferredBackBufferWidth = 1450;
-            _graphics.PreferredBackBufferHeight = 750;
-            //_graphics.PreferredBackBufferHeight = 1600 * 9 / 16;
+            //_graphics.PreferredBackBufferHeight = 750;
+            _graphics.PreferredBackBufferHeight = 1600 * 9 / 16;
             //_graphics.IsFullScreen = true;
             _graphics.ApplyChanges();
         }
@@ -72,9 +92,13 @@ namespace TrafficSimulator
             setupCars();
             foreach (Car car in cars)
             {
-                Task.Factory.StartNew(() => car.Move(roadStructure));
-                //Thread thread = new Thread(() => { car.Move(roadStructure); });
-                //thread.Start(); 
+                if (car != null)
+                {
+                    //In general, the ThreadPool is optimized for short-lived, lightweight tasks that can be executed quickly, while the TaskScheduler is better suited for longer-running, more complex tasks Task was lagging
+                    //Task.Factory.StartNew(() => car.Move(roadStructure));
+                    Thread thread = new Thread(() => { car.Move(roadStructure); });
+                    thread.Start();
+                }
             }
         }
 
@@ -107,41 +131,58 @@ namespace TrafficSimulator
             _spriteBatch.Begin();
             foreach (Car car in cars)
             {
-                _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10, car.position.Y - 10, car.Size.X, car.Size.Y), car.color);
+                if (car != null)
+                {
+                    _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10, car.position.Y - 10, car.Size.X, car.Size.Y), car.color);
+                    if (car.speedVect.X < 0 || car.speedVect.Y < 0)
+                    {
+                        _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10, car.position.Y - 10, 5, 5), Color.Orange);
+                    }
+                    else
+                    {
+                        _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10 + car.Size.X - 5, car.position.Y - 10 + car.Size.Y - 5, 5, 5), Color.Orange);
+                    }
+
+                    //_spriteBatch.Draw(rect, new Rectangle(car.position.X - 10, car.position.Y - 10, 5, 5), Color.Orange);
+                }
             }
             _spriteBatch.End();
             base.Draw(gameTime);
         }
 
-        private Car[] cars = new Car[5];
+        private Car[] cars = new Car[12];
 
         private void setupCars()
         {
-            float speed = 150;
-            /*            Random random = new Random();
-                        for (int i = 0; i < 5; i++)
-                        {
-                            cars[i] = new Car(bounderyPoints[i].X, bounderyPoints[i].Y, speed, speed);
-                            cars[i].setDestination(roadStructure[cars[i].position].First());
-                            Color randomColor = new Color(random.Next(256), random.Next(256), random.Next(256));
-                            cars[i].color = randomColor;
-                        }*/
-            cars[0] = new Car(811, 832, 0, -speed);
-            cars[0].setDestination(roadStructure[cars[0].position].First());
-            cars[1] = new Car(735, 832, 0, -speed);
-            cars[1].setDestination(roadStructure[cars[1].position].First());
-            cars[1].color = Color.Coral;
-            cars[2] = new Car(340, 0, 0, speed);
-            cars[2].setDestination(roadStructure[cars[2].position].First());
-            cars[2].color = Color.Red;
-            cars[3] = new Car(302, 0, 0, speed);
-            cars[3].setDestination(roadStructure[cars[3].position].First());
-            cars[3].color = Color.ForestGreen;
-            cars[4] = new Car(1289, 0, 0, speed);
-            cars[4].setDestination(roadStructure[cars[4].position].First());
-            cars[4].color = Color.BlueViolet;
-        }
+            Random random = new Random();
 
+            CarSetup[] carSetups = {new CarSetup(811, 832, 0, -1),
+                new CarSetup(735, 832, 0, -1),
+                new CarSetup(773, 832, 0, -1),
+                new CarSetup(302, 0, 0, 1),
+                new CarSetup(378, 0, 0, 1),
+                new CarSetup(340, 0, 0, 1),
+                new CarSetup(1289, 0, 0, 1),
+                new CarSetup(0, 580, 1, 0),
+                new CarSetup(0, 617, 1, 0),
+                new CarSetup(1327, 832, 0, -1),
+                new CarSetup(1470, 126, -1, 0),
+                new CarSetup(1040, 0, 0, 1)};
+
+            for (int i = 0; i < carSetups.Length; i++)
+            {
+                float speed = random.Next(100, 400);
+                /*                float speed = 300;*/
+                carSetups[i].velocityX *= speed;
+                carSetups[i].velocityY *= speed;
+                cars[i] = new Car(carSetups[i], cars);
+                cars[i].setDestination(roadStructure[cars[i].position].First());
+                Color randomColor = new(random.Next(256), random.Next(256), random.Next(256), 255);
+                cars[i].color = randomColor;
+
+            }
+
+        }
 
         private void DrawRoads()
         {

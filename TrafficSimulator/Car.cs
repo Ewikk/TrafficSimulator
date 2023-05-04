@@ -3,6 +3,8 @@ using SharpDX.MediaFoundation;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.Eventing.Reader;
+using System.DirectoryServices.ActiveDirectory;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -22,19 +24,20 @@ namespace TrafficSimulator
         public Point Size;
         public Color color = Color.Blue;
         private Stopwatch stopwatch = new Stopwatch();
-        public Car(int xPos, int yPos, float xSpeed, float ySpeed)
+        public Car[] cars;
+        public Car(CarSetup setup, Car[] cars)
         {
-            position = new Point(xPos, yPos);
-            speedVect = new Vector2(xSpeed, ySpeed);
-            xSpeed = Math.Abs(xSpeed);
-            ySpeed = Math.Abs(ySpeed);
-            speed = Math.Max(xSpeed, ySpeed);
+            position = new Point(setup.startX, setup.startY);
+            speedVect = new Vector2(setup.velocityX, setup.velocityY);
+            setup.velocityX = Math.Abs(setup.velocityX);
+            setup.velocityY = Math.Abs(setup.velocityY);
+            speed = Math.Max(setup.velocityX, setup.velocityY);
             posCopy = position;
             destCopy = destination;
             speedVectCopy = speedVect;
             stopwatch.Start();
             rotate();
-
+            this.cars = cars;
         }
 
         public void setDestination(Point dest)
@@ -44,11 +47,13 @@ namespace TrafficSimulator
 
         public void rotate()
         {
-            if(speedVect.X == 0){
+            if (speedVect.X == 0)
+            {
                 Size.X = 20;
                 Size.Y = 40;
             }
-            else{ 
+            else
+            {
                 Size.X = 40;
                 Size.Y = 20;
             }
@@ -67,6 +72,33 @@ namespace TrafficSimulator
                 int prevPosY = position.Y;
                 position.X += (int)(speedVect.X * time);
                 position.Y += (int)(speedVect.Y * time);
+
+
+                foreach (Car car in cars)
+                {
+                    if (this != car)
+                    {
+                        // potrzeba wprowadzenia samefarow, czsami 2 samochody znikaja jednoczesnie
+                        if ((this.position.X + this.Size.X / 2 <= car.position.X + car.Size.X / 2 &&
+                            this.position.X + this.Size.X / 2 >= car.position.X - car.Size.X / 2 &&
+                            this.position.Y + this.Size.Y / 2 <= car.position.Y + car.Size.Y / 2 &&
+                            this.position.Y + this.Size.Y / 2 >= car.position.Y - car.Size.Y / 2)
+                            ||
+                            (this.position.X - this.Size.X / 2 <= car.position.X + car.Size.X / 2 &&
+                            this.position.X - this.Size.X / 2 >= car.position.X - car.Size.X / 2 &&
+                            this.position.Y - this.Size.Y / 2 <= car.position.Y + car.Size.Y / 2 &&
+                            this.position.Y - this.Size.Y / 2 >= car.position.Y - car.Size.Y / 2))
+                        {
+                            //Console.WriteLine("kraksa");
+                            position = posCopy;
+                            destination = posCopy;
+                            speedVect = speedVectCopy;
+                            break;
+                        }
+                    }
+                }
+
+
                 if (Math.Sign(prevPosX - destination.X) != Math.Sign(position.X - destination.X) ||
                     Math.Sign(prevPosY - destination.Y) != Math.Sign(position.Y - destination.Y))
                 {
