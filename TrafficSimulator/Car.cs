@@ -14,11 +14,12 @@ namespace TrafficSimulator
 {
     public class Car
     {
+        public int turn;
         public Point position;
         public float speed;
         public Vector2 speedVect;
         private Vector2 speedVectCopy;
-        private Point destination;
+        public Point destination;
         private Point posCopy;
         private Point destCopy;
         public Point Size;
@@ -43,6 +44,60 @@ namespace TrafficSimulator
         public void setDestination(Point dest)
         {
             destination = dest;
+        }
+
+        public void setTurn()
+        {
+            turn = 0;
+            if (speedVect.X > 0)
+            {
+                if (destination.Y < position.Y)
+                {
+                    turn = -1;
+                }
+                else if (destination.Y > position.Y)
+                {
+                    turn = 1;
+                }
+            }
+            else if (speedVect.X < 0)
+            {
+                if (destination.Y < position.Y)
+                {
+                    turn = 1;
+                }
+                else if (destination.Y > position.Y)
+                {
+                    turn = -1;
+                }
+
+            }
+            else if (speedVect.Y > 0)
+            {
+                if (destination.X < position.X)
+                {
+                    turn = 1;
+                }
+                else if (destination.X > position.X)
+                {
+                    turn = -1;
+                }
+
+            }
+            else if (speedVect.Y < 0)
+            {
+                if (destination.X < position.X)
+                {
+                    turn = -1;
+                }
+                else if( destination.X > position.X)
+                {
+                    turn = 1;
+                }
+
+            }
+            Console.WriteLine(turn);
+            Console.WriteLine("\n");
         }
 
         public void rotate()
@@ -110,7 +165,7 @@ namespace TrafficSimulator
                         int distance = (int)(destination - position).ToVector2().Length();
                         position = destination;
                         destination = newDestination;
-
+                        setTurn();
 
                         if (position.X != destination.X)
                         {

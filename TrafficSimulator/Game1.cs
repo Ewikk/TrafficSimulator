@@ -122,6 +122,11 @@ namespace TrafficSimulator
             base.Update(gameTime);
         }
 
+        public int distance(Point p1, Point p2)
+        {
+            return Math.Abs((p1.X - p2.X) - (p1.Y - p2.Y));
+        }
+
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(Color.CornflowerBlue);
@@ -133,27 +138,39 @@ namespace TrafficSimulator
             {
                 if (car != null)
                 {
+                    Color leftBlinker = Color.Orange;
+                    Color rightBlinker = Color.Orange;
+                    int diss = distance(car.position, car.destination);
+                    if (diss < 50)
+                    {
+                        if (car.turn == 1)
+                            rightBlinker = Color.Red;
+                        else if (car.turn == -1)
+                            leftBlinker = Color.Red;
+                    }
+
                     int blinkerSize = 5;
                     _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10, car.position.Y - 10, car.Size.X, car.Size.Y), car.color);
                     if (car.speedVect.X < 0)
                     {
-                        _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10, car.position.Y - 10, blinkerSize, blinkerSize), Color.Orange);
-                        _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10, car.position.Y - 10 + 15, blinkerSize, blinkerSize), Color.Orange);
+                        _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10, car.position.Y - 10, blinkerSize, blinkerSize), rightBlinker);
+                        _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10, car.position.Y - 10 + 15, blinkerSize, blinkerSize), leftBlinker);
+
                     }
                     else if(car.speedVect.X > 0)
                     {
-                        _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10 + car.Size.X - blinkerSize, car.position.Y - 10 + car.Size.Y - blinkerSize, blinkerSize, blinkerSize), Color.Orange);
-                        _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10 + car.Size.X - blinkerSize, car.position.Y - 10 + car.Size.Y - blinkerSize - 15, blinkerSize, blinkerSize), Color.Orange);
+                        _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10 + car.Size.X - blinkerSize, car.position.Y - 10 + car.Size.Y - blinkerSize, blinkerSize, blinkerSize), rightBlinker);
+                        _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10 + car.Size.X - blinkerSize, car.position.Y - 10 + car.Size.Y - blinkerSize - 15, blinkerSize, blinkerSize), leftBlinker);
                     }
                     if(car.speedVect.Y < 0)
                     {
-                        _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10, car.position.Y - 10, blinkerSize, blinkerSize), Color.Orange);
-                        _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10 + 15, car.position.Y - 10, blinkerSize, blinkerSize), Color.Orange);
+                        _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10, car.position.Y - 10, blinkerSize, blinkerSize), leftBlinker);
+                        _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10 + 15, car.position.Y - 10, blinkerSize, blinkerSize), rightBlinker);
                     }
                     else if(car.speedVect.Y > 0)
                     {
-                        _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10 + car.Size.X - blinkerSize, car.position.Y - 10 + car.Size.Y - blinkerSize, blinkerSize, blinkerSize), Color.Orange);
-                        _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10 + car.Size.X - blinkerSize - 15, car.position.Y - 10 + car.Size.Y - blinkerSize, blinkerSize, blinkerSize), Color.Orange);
+                        _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10 + car.Size.X - blinkerSize, car.position.Y - 10 + car.Size.Y - blinkerSize, blinkerSize, blinkerSize), leftBlinker);
+                        _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10 + car.Size.X - blinkerSize - 15, car.position.Y - 10 + car.Size.Y - blinkerSize, blinkerSize, blinkerSize), rightBlinker);
                     }
                 }
             }
@@ -182,8 +199,8 @@ namespace TrafficSimulator
 
             for (int i = 0; i < carSetups.Length; i++)
             {
-                float speed = random.Next(100, 400);
-                /*                float speed = 300;*/
+                //float speed = random.Next(100, 400);
+                                float speed = 100;
                 carSetups[i].velocityX *= speed;
                 carSetups[i].velocityY *= speed;
                 cars[i] = new Car(carSetups[i], cars);
