@@ -164,6 +164,11 @@ namespace TrafficSimulator
                             rightBlinker = Color.Red;
                         else if (car.turn == -1)
                             leftBlinker = Color.Red;
+                        else
+                        {
+                            leftBlinker = Color.Green;
+                            rightBlinker = Color.Green;
+                        }
                     }
 
                     int blinkerSize = 5;
