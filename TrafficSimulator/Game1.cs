@@ -15,6 +15,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Collections;
 using SharpDX.MediaFoundation;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.Rebar;
 //using System.Drawing;
 
 
@@ -28,6 +29,18 @@ namespace TrafficSimulator
         {
             start = new Point(startX, startY);
             end = new Point(endX, endY);
+        }
+
+        public static Boolean operator ==(Line line1, Line line2)
+        {
+            if (line1.start == line2.start && line1.end == line2.end)
+                return true;
+            return false;
+        }
+        public static Boolean operator !=(Line line1, Line line2)
+        {
+            if (line1 == line2) return false;
+            return true;
         }
 
     }
@@ -57,11 +70,14 @@ namespace TrafficSimulator
         private SpriteBatch _roadsBatch;
         private SpriteBatch _sidewalksBatch;
         private List<Rectangle> roadList = new List<Rectangle>();
-        private List<Point> bounderyPoints = new List<Point>();
+        private List<Point> boundaryPoints = new List<Point>();
         private List<Rectangle> sidewalkList = new List<Rectangle>();
-        private List<Line> lineList = new List<Line>();
+        private List<Line> roadLineList = new List<Line>();
+        private List<Line> sidewalkLineList = new List<Line>();
         private Texture2D rect; //Texture used to draw rectangles
         private Dictionary<Point, List<Point>> roadStructure = new Dictionary<Point, List<Point>>();
+        private List<Point> startingPoints = new List<Point>();
+        private List<Point> endPoints = new List<Point>();
         private Dictionary<Point, List<Point>> sidewalkStructure = new Dictionary<Point, List<Point>>();
         private const string svgPath = "..\\..\\..\\final.svg";
         private const int scale = 7;
@@ -83,12 +99,13 @@ namespace TrafficSimulator
             base.Initialize();
             ReadSVG();
             Console.WriteLine("zaczynam pisac");
-            foreach (Point punkt in bounderyPoints)
+            foreach (Point punkt in boundaryPoints)
             {
                 Console.WriteLine(punkt.X + " " + punkt.Y);
             }
             createRoadStructure();
             printRoadStructure();
+            createPossiblePaths();
             setupCars();
             foreach (Car car in cars)
             {
@@ -96,7 +113,7 @@ namespace TrafficSimulator
                 {
                     //In general, the ThreadPool is optimized for short-lived, lightweight tasks that can be executed quickly, while the TaskScheduler is better suited for longer-running, more complex tasks Task was lagging
                     //Task.Factory.StartNew(() => car.Move(roadStructure));
-                    Thread thread = new Thread(() => { car.Move(roadStructure); });
+                    Thread thread = new Thread(() => { car.Move(roadStructure, startingPoints, endPoints); });
                     thread.Start();
                 }
             }
@@ -157,57 +174,91 @@ namespace TrafficSimulator
                         _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10, car.position.Y - 10 + 15, blinkerSize, blinkerSize), leftBlinker);
 
                     }
-                    else if(car.speedVect.X > 0)
+                    else if (car.speedVect.X > 0)
                     {
                         _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10 + car.Size.X - blinkerSize, car.position.Y - 10 + car.Size.Y - blinkerSize, blinkerSize, blinkerSize), rightBlinker);
                         _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10 + car.Size.X - blinkerSize, car.position.Y - 10 + car.Size.Y - blinkerSize - 15, blinkerSize, blinkerSize), leftBlinker);
                     }
-                    if(car.speedVect.Y < 0)
+                    if (car.speedVect.Y < 0)
                     {
                         _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10, car.position.Y - 10, blinkerSize, blinkerSize), leftBlinker);
                         _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10 + 15, car.position.Y - 10, blinkerSize, blinkerSize), rightBlinker);
                     }
-                    else if(car.speedVect.Y > 0)
+                    else if (car.speedVect.Y > 0)
                     {
                         _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10 + car.Size.X - blinkerSize, car.position.Y - 10 + car.Size.Y - blinkerSize, blinkerSize, blinkerSize), leftBlinker);
                         _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10 + car.Size.X - blinkerSize - 15, car.position.Y - 10 + car.Size.Y - blinkerSize, blinkerSize, blinkerSize), rightBlinker);
                     }
                 }
             }
+            //foreach (Car car in cars)
+            //{
+            //    _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10, car.position.Y - 10, car.Size.X, car.Size.Y), car.color);
+            //}
+            if (!Debugger.IsAttached)
+            {
+                foreach (Point start in startingPoints)
+                {
+                    _spriteBatch.Draw(rect, new Rectangle(start.X - 5, start.Y - 5, 10, 10), Color.Green);
+                }
+                //foreach (Point start in endPoints)
+                //{
+                //    _spriteBatch.Draw(rect, new Rectangle(start.X - 5, start.Y - 5, 10, 10), Color.Red);
+                //}
+                foreach (Car car in cars)
+                {
+                    _spriteBatch.Draw(rect, new Rectangle(car.destination.X - 5, car.destination.Y - 5, 10, 10), car.color);
+                }
+            }
             _spriteBatch.End();
             base.Draw(gameTime);
         }
 
-        private Car[] cars = new Car[12];
+        private Car[] cars;
 
         private void setupCars()
         {
+            int carsCount = 3;
+            cars = new Car[carsCount];
             Random random = new Random();
 
-            CarSetup[] carSetups = {new CarSetup(811, 832, 0, -1),
-                new CarSetup(735, 832, 0, -1),
-                new CarSetup(773, 832, 0, -1),
-                new CarSetup(302, 0, 0, 1),
-                new CarSetup(378, 0, 0, 1),
-                new CarSetup(340, 0, 0, 1),
-                new CarSetup(1289, 0, 0, 1),
-                new CarSetup(0, 580, 1, 0),
-                new CarSetup(0, 617, 1, 0),
-                new CarSetup(1327, 832, 0, -1),
-                new CarSetup(1470, 126, -1, 0),
-                new CarSetup(1040, 0, 0, 1)};
+            //useless
+            //CarSetup[] carSetups = {new CarSetup(811, 832, 0, -1),
+            //    new CarSetup(735, 832, 0, -1),
+            //    new CarSetup(773, 832, 0, -1),
+            //    new CarSetup(302, 0, 0, 1),
+            //    new CarSetup(378, 0, 0, 1),
+            //    new CarSetup(340, 0, 0, 1),
+            //    new CarSetup(1289, 0, 0, 1),
+            //    new CarSetup(0, 580, 1, 0),
+            //    new CarSetup(0, 617, 1, 0),
+            //    new CarSetup(1327, 832, 0, -1),
+            //    new CarSetup(1470, 126, -1, 0),
+            //    new CarSetup(1040, 0, 0, 1)};
 
-            for (int i = 0; i < carSetups.Length; i++)
+            //for (int i = 0; i < carSetups.Length; i++)
+            //{
+            //    //float speed = random.Next(100, 400);
+            //    float speed = 100;
+            //    carSetups[i].velocityX *= speed;
+            //    carSetups[i].velocityY *= speed;
+            //    cars[i] = new Car(carSetups[i], cars);
+            //    cars[i].setDestination(roadStructure[cars[i].position].First());
+            //    Color randomColor = new(random.Next(256), random.Next(256), random.Next(256), 255);
+            //    cars[i].color = randomColor;
+
+            //}
+
+            int i = 0;
+            foreach (Point start in startingPoints)
             {
-                //float speed = random.Next(100, 400);
-                                float speed = 100;
-                carSetups[i].velocityX *= speed;
-                carSetups[i].velocityY *= speed;
-                cars[i] = new Car(carSetups[i], cars);
-                cars[i].setDestination(roadStructure[cars[i].position].First());
-                Color randomColor = new(random.Next(256), random.Next(256), random.Next(256), 255);
-                cars[i].color = randomColor;
-
+                Random rand = new Random();
+                cars[i] = new Car(start.X, start.Y, possiblePaths);
+                //cars[i].setDestination(endPoints[rand.Next(endPoints.Count)]);
+                cars[i].setDestination(endPoints[rand.Next(endPoints.Count)]);
+                cars[i].color = new Color(random.Next(256), random.Next(256), random.Next(256), 255); ;
+                i++;
+                if (i == carsCount) break;
             }
 
         }
@@ -234,13 +285,35 @@ namespace TrafficSimulator
 
         private void createRoadStructure()
         {
-            foreach (Line line in lineList)
+            foreach (Line line in roadLineList)
             {
                 if (!roadStructure.ContainsKey(line.start))
                 {
                     roadStructure.Add(line.start, new List<Point>());
                 }
                 roadStructure[line.start].Add(line.end);
+            }
+
+            foreach (Line line in roadLineList)
+            {
+                if (!roadStructure.ContainsKey(line.end)) endPoints.Add(line.end);
+                Boolean DupFound = false;
+                foreach (var road in roadStructure)
+                {
+                    if (road.Value.Contains(line.start))
+                    {
+                        DupFound = true;
+                        break;
+                    }
+                }
+                if (!DupFound) startingPoints.Add(line.start);
+            }
+            if (Debugger.IsAttached)
+            {
+                Console.WriteLine("Starting Points:");
+                Console.WriteLine(startingPoints.Count);
+                foreach (Point start in startingPoints) Console.WriteLine(start.ToString());
+                Console.WriteLine("End");
             }
         }
 
@@ -326,13 +399,13 @@ namespace TrafficSimulator
                     Point startP = new Point((int)startX, (int)startY);
                     Point endP = new Point((int)endX, (int)endY);
 
-                    if (!bounderyPoints.Contains(startP))
+                    if (!boundaryPoints.Contains(startP))
                     {
-                        bounderyPoints.Add(startP);
+                        boundaryPoints.Add(startP);
                     }
-                    if (!bounderyPoints.Contains(endP))
+                    if (!boundaryPoints.Contains(endP))
                     {
-                        bounderyPoints.Add(endP);
+                        boundaryPoints.Add(endP);
                     }
                     addRoad(startP, endP, brushWidth);
                 }
@@ -377,12 +450,77 @@ namespace TrafficSimulator
             if (brushWidth == 35)
             {
                 roadList.Add(coords);
+                roadLineList.Add(new Line((int)start.X, (int)start.Y, (int)end.X, (int)end.Y));
             }
             else if (brushWidth == 14)
             {
                 sidewalkList.Add(coords);
+                sidewalkLineList.Add(new Line((int)start.X, (int)start.Y, (int)end.X, (int)end.Y));
             }
-            lineList.Add(new Line((int)start.X, (int)start.Y, (int)end.X, (int)end.Y));
+        }
+
+
+
+
+        //BRUTE FORCE
+        //TO DO
+        Dictionary<Point, Dictionary<Point, List<Point>>> possiblePaths;
+        const int bruteDepth = 15;
+        private void createPossiblePaths()
+        {
+            possiblePaths = new Dictionary<Point, Dictionary<Point, List<Point>>> ();
+            foreach (Point start in startingPoints)
+            {
+                bool isFirst = true;
+                foreach (Point end in endPoints)
+                {
+                    List<Point> path = new List<Point>();
+                    path.Add(start);
+                    (List<Point>, int) foundPath = checkPath((path, 0), end, bruteDepth);
+                    if (isFirst)
+                    {
+                        possiblePaths.Add(start, new Dictionary<Point, List<Point>>());
+                        isFirst = false;
+                    }
+                    possiblePaths[start].Add(end, foundPath.Item1);
+                }
+            }
+        }
+        private (List<Point>, int) checkPath((List<Point>, int) path, Point destination, int depth)
+        {
+            if (depth == 0)
+            {
+                return (path.Item1, 0);
+            }
+            int shortestPath = int.MaxValue;
+            (List<Point>, int) result = (path.Item1, 0);
+            try
+            {
+                foreach (Point point in roadStructure[path.Item1.Last()])
+                {
+                    List<Point> points = new List<Point>(path.Item1);
+                    int length = path.Item2 + Math.Abs(point.X - path.Item1.Last().X + point.Y - path.Item1.Last().Y);
+                    points.Add(point);
+                    if (point == destination)
+                        return (points, path.Item2 + length);
+                    (List<Point>, int) foundPath = checkPath((points, path.Item2 + length), destination, depth - 1);
+                    if(foundPath.Item2 > 0)
+                    {
+                        if(foundPath.Item2 < shortestPath)
+                        {
+                            shortestPath = foundPath.Item2;
+                            result = foundPath;
+                        }
+                    }
+                }
+                return result;
+            }
+            catch
+            {
+                return (path.Item1, 0);
+            }
+
+
         }
     }
 }
