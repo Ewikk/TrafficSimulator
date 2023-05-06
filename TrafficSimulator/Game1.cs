@@ -147,6 +147,11 @@ namespace TrafficSimulator
                             rightBlinker = Color.Red;
                         else if (car.turn == -1)
                             leftBlinker = Color.Red;
+                        else
+                        {
+                            leftBlinker = Color.Green;
+                            rightBlinker = Color.Green;
+                        }
                     }
 
                     int blinkerSize = 5;
@@ -204,7 +209,9 @@ namespace TrafficSimulator
                 carSetups[i].velocityX *= speed;
                 carSetups[i].velocityY *= speed;
                 cars[i] = new Car(carSetups[i], cars);
-                cars[i].setDestination(roadStructure[cars[i].position].First());
+                Point dest = roadStructure[cars[i].position].First();
+                List<Point> listOfNextDest = roadStructure[dest];
+                cars[i].setDestination(dest, listOfNextDest[random.Next(0, listOfNextDest.Count())]);
                 Color randomColor = new(random.Next(256), random.Next(256), random.Next(256), 255);
                 cars[i].color = randomColor;
 
