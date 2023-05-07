@@ -107,6 +107,7 @@ namespace TrafficSimulator
             printRoadStructure();
             createPossiblePaths();
             setupCars();
+
             foreach (Car car in cars)
             {
                 if (car != null)
@@ -115,6 +116,7 @@ namespace TrafficSimulator
                     //Task.Factory.StartNew(() => car.Move(roadStructure));
                     Thread thread = new Thread(() => { car.Move(roadStructure, startingPoints, endPoints); });
                     thread.Start();
+                    carThreads.Add(thread);
                 }
             }
         }
@@ -132,11 +134,26 @@ namespace TrafficSimulator
         protected override void Update(GameTime gameTime)
         {
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
+            {
                 Exit();
+                foreach (Thread thread in carThreads)
+                {
+                    thread.Interrupt();
+                }
+            }
 
             // TODO: Add your update logic here
 
             base.Update(gameTime);
+        }
+
+        protected override void OnExiting(object sender, EventArgs args)
+        {
+            foreach (Thread thread in carThreads)
+            {
+                thread.Interrupt();
+            }
+            base.OnExiting(sender, args);
         }
 
         public int distance(Point p1, Point p2)
@@ -153,48 +170,46 @@ namespace TrafficSimulator
             _spriteBatch.Begin();
             foreach (Car car in cars)
             {
-                if (car != null)
+                Color leftBlinker = Color.Orange;
+                Color rightBlinker = Color.Orange;
+                int diss = distance(car.position, car.nextJunction);
+                if (diss < 200)
                 {
-                    Color leftBlinker = Color.Orange;
-                    Color rightBlinker = Color.Orange;
-                    int diss = distance(car.position, car.destination);
-                    if (diss < 50)
+                    if (car.turn == 1)
+                        rightBlinker = Color.Red;
+                    else if (car.turn == -1)
+                        leftBlinker = Color.Red;
+                    else
                     {
-                        if (car.turn == 1)
-                            rightBlinker = Color.Red;
-                        else if (car.turn == -1)
-                            leftBlinker = Color.Red;
-                        else
-                        {
-                            leftBlinker = Color.Green;
-                            rightBlinker = Color.Green;
-                        }
-                    }
-
-                    int blinkerSize = 5;
-                    _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10, car.position.Y - 10, car.Size.X, car.Size.Y), car.color);
-                    if (car.speedVect.X < 0)
-                    {
-                        _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10, car.position.Y - 10, blinkerSize, blinkerSize), rightBlinker);
-                        _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10, car.position.Y - 10 + 15, blinkerSize, blinkerSize), leftBlinker);
-
-                    }
-                    else if (car.speedVect.X > 0)
-                    {
-                        _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10 + car.Size.X - blinkerSize, car.position.Y - 10 + car.Size.Y - blinkerSize, blinkerSize, blinkerSize), rightBlinker);
-                        _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10 + car.Size.X - blinkerSize, car.position.Y - 10 + car.Size.Y - blinkerSize - 15, blinkerSize, blinkerSize), leftBlinker);
-                    }
-                    if (car.speedVect.Y < 0)
-                    {
-                        _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10, car.position.Y - 10, blinkerSize, blinkerSize), leftBlinker);
-                        _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10 + 15, car.position.Y - 10, blinkerSize, blinkerSize), rightBlinker);
-                    }
-                    else if (car.speedVect.Y > 0)
-                    {
-                        _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10 + car.Size.X - blinkerSize, car.position.Y - 10 + car.Size.Y - blinkerSize, blinkerSize, blinkerSize), leftBlinker);
-                        _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10 + car.Size.X - blinkerSize - 15, car.position.Y - 10 + car.Size.Y - blinkerSize, blinkerSize, blinkerSize), rightBlinker);
+                        leftBlinker = Color.Green;
+                        rightBlinker = Color.Green;
                     }
                 }
+
+                int blinkerSize = 5;
+                _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10, car.position.Y - 10, car.Size.X, car.Size.Y), car.color);
+                if (car.speedVect.X < 0)
+                {
+                    _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10, car.position.Y - 10, blinkerSize, blinkerSize), rightBlinker);
+                    _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10, car.position.Y - 10 + 15, blinkerSize, blinkerSize), leftBlinker);
+
+                }
+                else if (car.speedVect.X > 0)
+                {
+                    _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10 + car.Size.X - blinkerSize, car.position.Y - 10 + car.Size.Y - blinkerSize, blinkerSize, blinkerSize), rightBlinker);
+                    _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10 + car.Size.X - blinkerSize, car.position.Y - 10 + car.Size.Y - blinkerSize - 15, blinkerSize, blinkerSize), leftBlinker);
+                }
+                if (car.speedVect.Y < 0)
+                {
+                    _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10, car.position.Y - 10, blinkerSize, blinkerSize), leftBlinker);
+                    _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10 + 15, car.position.Y - 10, blinkerSize, blinkerSize), rightBlinker);
+                }
+                else if (car.speedVect.Y > 0)
+                {
+                    _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10 + car.Size.X - blinkerSize, car.position.Y - 10 + car.Size.Y - blinkerSize, blinkerSize, blinkerSize), leftBlinker);
+                    _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10 + car.Size.X - blinkerSize - 15, car.position.Y - 10 + car.Size.Y - blinkerSize, blinkerSize, blinkerSize), rightBlinker);
+                }
+
             }
             //foreach (Car car in cars)
             //{
@@ -220,39 +235,12 @@ namespace TrafficSimulator
         }
 
         private Car[] cars;
-
+        private List<Thread> carThreads = new List<Thread>();
         private void setupCars()
         {
             int carsCount = startingPoints.Count;
             cars = new Car[carsCount];
             Random random = new Random();
-
-            //useless
-            //CarSetup[] carSetups = {new CarSetup(811, 832, 0, -1),
-            //    new CarSetup(735, 832, 0, -1),
-            //    new CarSetup(773, 832, 0, -1),
-            //    new CarSetup(302, 0, 0, 1),
-            //    new CarSetup(378, 0, 0, 1),
-            //    new CarSetup(340, 0, 0, 1),
-            //    new CarSetup(1289, 0, 0, 1),
-            //    new CarSetup(0, 580, 1, 0),
-            //    new CarSetup(0, 617, 1, 0),
-            //    new CarSetup(1327, 832, 0, -1),
-            //    new CarSetup(1470, 126, -1, 0),
-            //    new CarSetup(1040, 0, 0, 1)};
-
-            //for (int i = 0; i < carSetups.Length; i++)
-            //{
-            //    //float speed = random.Next(100, 400);
-            //    float speed = 100;
-            //    carSetups[i].velocityX *= speed;
-            //    carSetups[i].velocityY *= speed;
-            //    cars[i] = new Car(carSetups[i], cars);
-            //    cars[i].setDestination(roadStructure[cars[i].position].First());
-            //    Color randomColor = new(random.Next(256), random.Next(256), random.Next(256), 255);
-            //    cars[i].color = randomColor;
-
-            //}
 
             int i = 0;
             foreach (Point start in startingPoints)
@@ -313,7 +301,7 @@ namespace TrafficSimulator
                 }
                 if (!DupFound) startingPoints.Add(line.start);
             }
-            if (Debugger.IsAttached)
+            if (!Debugger.IsAttached)
             {
                 Console.WriteLine("Starting Points:");
                 Console.WriteLine(startingPoints.Count);
@@ -495,7 +483,11 @@ namespace TrafficSimulator
                 i++;
             }
             foreach (Thread thread in threads) thread.Start();
-            foreach (Thread thread in threads) thread.Join();
+            foreach (Thread thread in threads)
+            {
+                thread.Join();
+                Console.WriteLine("Thread joined");
+            }
         }
         private (List<Point>, int) checkPath((List<Point>, int) path, Point destination, int depth)
         {
@@ -515,9 +507,9 @@ namespace TrafficSimulator
                     if (point == destination)
                         return (points, path.Item2 + length);
                     (List<Point>, int) foundPath = checkPath((points, path.Item2 + length), destination, depth - 1);
-                    if(foundPath.Item2 > 0)
+                    if (foundPath.Item2 > 0)
                     {
-                        if(foundPath.Item2 < shortestPath)
+                        if (foundPath.Item2 < shortestPath)
                         {
                             shortestPath = foundPath.Item2;
                             result = foundPath;
