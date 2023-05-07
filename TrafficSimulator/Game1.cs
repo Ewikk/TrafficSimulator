@@ -141,7 +141,7 @@ namespace TrafficSimulator
         private void setupCars()
         {
             int carsCount = startingPoints.Count;
-            //int carsCount = 5;
+            //carsCount = 2;
             cars = new Car[carsCount];
             Random random = new Random();
 
@@ -153,7 +153,9 @@ namespace TrafficSimulator
                 cars[i] = new Car(start.X, start.Y, possiblePaths);
                 //cars[i].setDestination(endPoints[rand.Next(endPoints.Count)]);
                 cars[i].setDestination(endPoints[rand.Next(endPoints.Count)]);
-                cars[i].color = new Color(random.Next(256), random.Next(256), random.Next(256), 255); ;
+                cars[i].color = new Color(random.Next(256), random.Next(256), random.Next(256), 255);
+                //TEMP
+                cars[i].cars = cars;
                 i++;
                 if (i == carsCount) break;
             }

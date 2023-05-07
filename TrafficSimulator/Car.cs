@@ -30,6 +30,9 @@ namespace TrafficSimulator
         public Point Size;
         public Color color = Color.Blue;
         private Stopwatch stopwatch = new Stopwatch();
+
+
+        //TEMP
         public Car[] cars;
 
 
@@ -180,12 +183,44 @@ namespace TrafficSimulator
                     {
                         if (area.ContainsKey(nextJunction) && !area[nextJunction].isOpen && distance(nextJunction, position) < 20)
                         {
-                            Thread.Sleep(50);
                             isStopped = true;
-                            continue;
+                            break;
                         }
                     }
-                    if (isStopped) { continue; }
+                    foreach (Car car in cars)
+                    {
+                        if (this == car)
+                            continue;
+
+                        double sp = 0;
+                        int ownPos =0;
+                        int pos2 = 0;
+                        bool checkCond = false;
+                        //TO simplify
+                        if (speedVect.X != 0 && position.Y == car.position.Y)
+                        {
+                            sp = speedVect.X;
+                            ownPos = position.X;
+                            pos2 = car.position.X;
+                        }
+                        else if(speedVect.Y != 0 && position.X == car.position.X)
+                        {
+                            sp = speedVect.Y;
+                            ownPos = position.Y;
+                            pos2 = car.position.Y;
+                        }
+                        if (sp > 0 && pos2 - ownPos < 50 && pos2 - ownPos > 0||
+                               sp < 0 && ownPos - pos2 < 50 && ownPos - pos2 > 0)
+                        {
+                            isStopped = true;
+                            break;
+                        }
+                    }
+                    if (isStopped)
+                    {
+                        Thread.Sleep(50);
+                        continue;
+                    }
 
 
                     int prevPosX = position.X;
