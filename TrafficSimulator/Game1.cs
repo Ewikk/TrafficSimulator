@@ -76,6 +76,7 @@ namespace TrafficSimulator
         private List<Line> roadLineList = new List<Line>();
         private List<Line> sidewalkLineList = new List<Line>();
         private Texture2D rect; //Texture used to draw rectangles
+        private Texture2D circle; //Texture used to draw circles
         private Dictionary<Point, List<Point>> roadStructure = new Dictionary<Point, List<Point>>();
         private List<Point> startingPoints = new List<Point>();
         private List<Point> endPoints = new List<Point>();
@@ -166,6 +167,7 @@ namespace TrafficSimulator
             _testingBatch = new SpriteBatch(GraphicsDevice);
             rect = new Texture2D(_graphics.GraphicsDevice, 1, 1);
             rect.SetData(new[] { Color.White });
+            circle = this.Content.Load<Texture2D>("circle");
             // TODO: use this.Content to load your game content here
         }
 
@@ -288,9 +290,9 @@ namespace TrafficSimulator
                 foreach (var light in area)
                 {
                     if (light.Value.isOpen)
-                        _testingBatch.Draw(rect, new Rectangle(light.Value.drawPos.X - 8, light.Value.drawPos.Y - 8, 16, 16), Color.Green);
+                        _testingBatch.Draw(circle, new Rectangle(light.Value.drawPos.X - 10, light.Value.drawPos.Y - 10, 20, 20), Color.Green);
                     else
-                        _testingBatch.Draw(rect, new Rectangle(light.Value.drawPos.X - 8, light.Value.drawPos.Y - 8, 16, 16), Color.Red);
+                        _testingBatch.Draw(circle, new Rectangle(light.Value.drawPos.X - 10, light.Value.drawPos.Y - 10, 20, 20), Color.Red);
                 }
             }
             _testingBatch.End();
