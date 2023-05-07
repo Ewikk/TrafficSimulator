@@ -57,7 +57,8 @@ namespace TrafficSimulator
             this.end = end;
             this.drawPos = drawPos;
         }
-        public void switchLight() {
+        public void switchLight()
+        {
             isOpen = !isOpen;
         }
 
@@ -107,7 +108,7 @@ namespace TrafficSimulator
             // TODO: Add your initialization logic here
             base.Initialize();
             TrafficLightsAreas = new Dictionary<Point, TrafficLight>[2];
-            for(int i = 0; i < TrafficLightsAreas.Length; i++)
+            for (int i = 0; i < TrafficLightsAreas.Length; i++)
             {
                 TrafficLightsAreas[i] = new Dictionary<Point, TrafficLight>();
             }
@@ -193,11 +194,52 @@ namespace TrafficSimulator
                     }
                 }
             }
-            else if(Keyboard.GetState().IsKeyUp(Keys.Space)) spacePressed = false;
-
+            else if (Keyboard.GetState().IsKeyUp(Keys.Space)) spacePressed = false;
+            steerTrafficLights(gameTime);
             // TODO: Add your update logic here
 
             base.Update(gameTime);
+        }
+
+        const double interval = 5;
+        private double timeSinceLastSwitch = 0;
+        private double cooldown = 0;
+        private Dictionary<Point, TrafficLight> toBeSwitched;
+        private void steerTrafficLights(GameTime gameTime)
+        {
+            if (cooldown == 0)
+            {
+                timeSinceLastSwitch += gameTime.ElapsedGameTime.TotalSeconds;
+                if (timeSinceLastSwitch > interval)
+                {
+                    timeSinceLastSwitch = 0;
+                    cooldown = 1;
+                    foreach (var area in TrafficLightsAreas)
+                    {
+                        if (area.First().Value.isOpen)
+                        {
+                            foreach (var light in area)
+                            {
+                                light.Value.switchLight();
+                            }
+                        }
+                        else toBeSwitched = area;
+                    }
+                }
+            }
+            else
+            {
+                cooldown -= gameTime.ElapsedGameTime.TotalSeconds;
+                if (cooldown <= 0)
+                {
+                    cooldown = 0;
+                    foreach (var light in toBeSwitched)
+                    {
+                        light.Value.switchLight();
+                    }
+                }
+            }
+
         }
 
         protected override void OnExiting(object sender, EventArgs args)
@@ -299,7 +341,7 @@ namespace TrafficSimulator
             base.Draw(gameTime);
         }
 
-       
+
 
         private void DrawRoads()
         {
@@ -453,9 +495,10 @@ namespace TrafficSimulator
                         boundaryPoints.Add(endP);
                     }
                     addRoad(startP, endP, brushWidth);
-                    if(brushColor == TrafficLightsArea1Color || brushColor == TrafficLightsArea2Color){
-                        int xDiff = (int)(endX - startX)/2;
-                        int yDiff = (int)(endY - startY)/2;
+                    if (brushColor == TrafficLightsArea1Color || brushColor == TrafficLightsArea2Color)
+                    {
+                        int xDiff = (int)(endX - startX) / 2;
+                        int yDiff = (int)(endY - startY) / 2;
                         int xCenter = (int)startX + xDiff;
                         int yCenter = (int)startY + yDiff;
                         if (brushColor == TrafficLightsArea1Color)
@@ -537,7 +580,7 @@ namespace TrafficSimulator
                     {
                         List<Point> path = new List<Point>();
                         path.Add(start);
-                        (List<Point>, int) foundPath = checkPath((path, 0), end, bruteDepth);
+                        (List<Point>, int) foundPath = checkPath((path, 0), end, bruteDepth, int.MaxValue);
                         if (!possiblePaths.ContainsKey(start))
                         {
                             possiblePaths.Add(start, new Dictionary<Point, List<Point>>());
@@ -553,14 +596,17 @@ namespace TrafficSimulator
                 thread.Join();
                 Console.WriteLine("Thread joined");
             }
+            Console.WriteLine(iter);
         }
-        private (List<Point>, int) checkPath((List<Point>, int) path, Point destination, int depth)
+        public int iter = 0;
+        private (List<Point>, int) checkPath((List<Point>, int) path, Point destination, int depth, int bestLength)
         {
-            if (depth == 0)
+            iter++;
+            if (depth == 0 || path.Item2 > bestLength)
             {
                 return (path.Item1, 0);
             }
-            int shortestPath = int.MaxValue;
+            int shortestPath = bestLength;
             (List<Point>, int) result = (path.Item1, 0);
             try
             {
@@ -571,7 +617,7 @@ namespace TrafficSimulator
                     points.Add(point);
                     if (point == destination)
                         return (points, path.Item2 + length);
-                    (List<Point>, int) foundPath = checkPath((points, path.Item2 + length), destination, depth - 1);
+                    (List<Point>, int) foundPath = checkPath((points, path.Item2 + length), destination, depth - 1, shortestPath);
                     if (foundPath.Item2 > 0)
                     {
                         if (foundPath.Item2 < shortestPath)
