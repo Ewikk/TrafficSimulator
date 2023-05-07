@@ -51,16 +51,16 @@ namespace TrafficSimulator
             init();
         }
         //car is not supposed to see all the others 
-        public Car(CarSetup setup, Car[] cars)
-        {
-            position = new Point(setup.startX, setup.startY);
-            speedVect = new Vector2(setup.velocityX, setup.velocityY);
-            setup.velocityX = Math.Abs(setup.velocityX);
-            setup.velocityY = Math.Abs(setup.velocityY);
-            speed = Math.Max(setup.velocityX, setup.velocityY);
-            init();
-            this.cars = cars;
-        }
+        //public Car(CarSetup setup, Car[] cars)
+        //{
+        //    position = new Point(setup.startX, setup.startY);
+        //    speedVect = new Vector2(setup.velocityX, setup.velocityY);
+        //    setup.velocityX = Math.Abs(setup.velocityX);
+        //    setup.velocityY = Math.Abs(setup.velocityY);
+        //    speed = Math.Max(setup.velocityX, setup.velocityY);
+        //    init();
+        //    this.cars = cars;
+        //}
 
         private void init()
         {
@@ -81,7 +81,6 @@ namespace TrafficSimulator
             nextJunction = path.Dequeue();
             speedVect = new Vector2(Math.Sign(nextJunction.X - position.X) * speed, Math.Sign(nextJunction.Y - position.Y) * speed);
             rotate();
-
         }
 
         public void setTurn()
@@ -151,8 +150,12 @@ namespace TrafficSimulator
             }
         }
 
+        public int distance(Point p1, Point p2)
+        {
+            return Math.Abs((p1.X - p2.X) - (p1.Y - p2.Y));
+        }
 
-        public void Move(Dictionary<Point, List<Point>> roadStructure, List<Point> startingPoints, List<Point> endPoints)
+        public void Move(Dictionary<Point, List<Point>> roadStructure, List<Point> startingPoints, List<Point> endPoints, Dictionary<Point, TrafficLight>[] trafficLights)
         {
             try
             {
@@ -171,6 +174,20 @@ namespace TrafficSimulator
                     }
                     stopwatch.Restart();
                     stopwatch.Start();
+
+                    bool isStopped = false;
+                    foreach (var area in trafficLights)
+                    {
+                        if (area.ContainsKey(nextJunction) && !area[nextJunction].isOpen && distance(nextJunction, position) < 20)
+                        {
+                            Thread.Sleep(50);
+                            isStopped = true;
+                            continue;
+                        }
+                    }
+                    if (isStopped) { continue; }
+
+
                     int prevPosX = position.X;
                     int prevPosY = position.Y;
                     position.X += (int)(speedVect.X * time);
@@ -243,24 +260,14 @@ namespace TrafficSimulator
                             turn = 0;
                         }
 
-                        //if (!roadStructure.ContainsKey(destination))
-                        //{
-                        //    outOfMap = true;
-                        //}
-                        //else
-                        //{
-                        //    List<Point> listOfNextDest = roadStructure[destination];
-                        //    nextJunction = listOfNextDest[rand.Next(0, listOfNextDest.Count())];
-                        //    setTurn();
-                        //}
-
                         rotate();
 
                     }
                     Thread.Sleep(15);
                 }
             }
-            catch (ThreadInterruptedException){
+            catch (ThreadInterruptedException)
+            {
                 return;
             }
         }

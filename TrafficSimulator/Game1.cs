@@ -45,20 +45,20 @@ namespace TrafficSimulator
 
     }
 
-    public struct CarSetup
+    public class TrafficLight
     {
-        public int startX;
-        public int startY;
-
-        public float velocityX;
-        public float velocityY;
-
-        public CarSetup(int sX, int sY, float vX, float vY)
+        public bool isOpen = true;
+        public Point start;
+        public Point end;
+        public Point drawPos;
+        public TrafficLight(Point start, Point end, Point drawPos)
         {
-            startX = sX;
-            startY = sY;
-            velocityX = vX;
-            velocityY = vY;
+            this.start = start;
+            this.end = end;
+            this.drawPos = drawPos;
+        }
+        public void switchLight() {
+            isOpen = !isOpen;
         }
 
     }
@@ -69,6 +69,7 @@ namespace TrafficSimulator
         private SpriteBatch _spriteBatch;
         private SpriteBatch _roadsBatch;
         private SpriteBatch _sidewalksBatch;
+        private SpriteBatch _testingBatch; // to be separated;
         private List<Rectangle> roadList = new List<Rectangle>();
         private List<Point> boundaryPoints = new List<Point>();
         private List<Rectangle> sidewalkList = new List<Rectangle>();
@@ -81,12 +82,19 @@ namespace TrafficSimulator
         private Dictionary<Point, List<Point>> sidewalkStructure = new Dictionary<Point, List<Point>>();
         private const string svgPath = "..\\..\\..\\final.svg";
         private const int scale = 7;
+
+
+        //NEW FEATURE TESTING
+        private Dictionary<Point, TrafficLight>[] TrafficLightsAreas;/* = new Dictionary<Point, TrafficLight>();*/
+        private static readonly Color TrafficLightsArea1Color = new Color(0, 128, 0);
+        private static readonly Color TrafficLightsArea2Color = new Color(255, 0, 0);
+
         public Game1()
         {
             _graphics = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
-            _graphics.PreferredBackBufferWidth = 1450;
+            _graphics.PreferredBackBufferWidth = 1470;
             //_graphics.PreferredBackBufferHeight = 750;
             _graphics.PreferredBackBufferHeight = 1600 * 9 / 16;
             //_graphics.IsFullScreen = true;
@@ -97,6 +105,11 @@ namespace TrafficSimulator
         {
             // TODO: Add your initialization logic here
             base.Initialize();
+            TrafficLightsAreas = new Dictionary<Point, TrafficLight>[2];
+            for(int i = 0; i < TrafficLightsAreas.Length; i++)
+            {
+                TrafficLightsAreas[i] = new Dictionary<Point, TrafficLight>();
+            }
             ReadSVG();
             Console.WriteLine("zaczynam pisac");
             foreach (Point punkt in boundaryPoints)
@@ -114,11 +127,35 @@ namespace TrafficSimulator
                 {
                     //In general, the ThreadPool is optimized for short-lived, lightweight tasks that can be executed quickly, while the TaskScheduler is better suited for longer-running, more complex tasks Task was lagging
                     //Task.Factory.StartNew(() => car.Move(roadStructure));
-                    Thread thread = new Thread(() => { car.Move(roadStructure, startingPoints, endPoints); });
+                    Thread thread = new Thread(() => { car.Move(roadStructure, startingPoints, endPoints, TrafficLightsAreas); });
                     thread.Start();
                     carThreads.Add(thread);
                 }
             }
+        }
+
+        private Car[] cars;
+        private List<Thread> carThreads = new List<Thread>();
+        private void setupCars()
+        {
+            int carsCount = startingPoints.Count;
+            //int carsCount = 5;
+            cars = new Car[carsCount];
+            Random random = new Random();
+
+            int i = 0;
+            if (carsCount == 0) return;
+            foreach (Point start in startingPoints)
+            {
+                Random rand = new Random();
+                cars[i] = new Car(start.X, start.Y, possiblePaths);
+                //cars[i].setDestination(endPoints[rand.Next(endPoints.Count)]);
+                cars[i].setDestination(endPoints[rand.Next(endPoints.Count)]);
+                cars[i].color = new Color(random.Next(256), random.Next(256), random.Next(256), 255); ;
+                i++;
+                if (i == carsCount) break;
+            }
+
         }
 
         protected override void LoadContent()
@@ -126,11 +163,13 @@ namespace TrafficSimulator
             _spriteBatch = new SpriteBatch(GraphicsDevice);
             _roadsBatch = new SpriteBatch(GraphicsDevice);
             _sidewalksBatch = new SpriteBatch(GraphicsDevice);
+            _testingBatch = new SpriteBatch(GraphicsDevice);
             rect = new Texture2D(_graphics.GraphicsDevice, 1, 1);
             rect.SetData(new[] { Color.White });
             // TODO: use this.Content to load your game content here
         }
 
+        bool spacePressed = false;
         protected override void Update(GameTime gameTime)
         {
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
@@ -141,6 +180,18 @@ namespace TrafficSimulator
                     thread.Interrupt();
                 }
             }
+            if (Keyboard.GetState().IsKeyDown(Keys.Space) && !spacePressed)
+            {
+                spacePressed = true;
+                foreach (var area in TrafficLightsAreas)
+                {
+                    foreach (var light in area)
+                    {
+                        light.Value.switchLight();
+                    }
+                }
+            }
+            else if(Keyboard.GetState().IsKeyUp(Keys.Space)) spacePressed = false;
 
             // TODO: Add your update logic here
 
@@ -231,30 +282,22 @@ namespace TrafficSimulator
                 }
             }
             _spriteBatch.End();
+            _testingBatch.Begin();
+            foreach (var area in TrafficLightsAreas)
+            {
+                foreach (var light in area)
+                {
+                    if (light.Value.isOpen)
+                        _testingBatch.Draw(rect, new Rectangle(light.Value.drawPos.X - 8, light.Value.drawPos.Y - 8, 16, 16), Color.Green);
+                    else
+                        _testingBatch.Draw(rect, new Rectangle(light.Value.drawPos.X - 8, light.Value.drawPos.Y - 8, 16, 16), Color.Red);
+                }
+            }
+            _testingBatch.End();
             base.Draw(gameTime);
         }
 
-        private Car[] cars;
-        private List<Thread> carThreads = new List<Thread>();
-        private void setupCars()
-        {
-            int carsCount = startingPoints.Count;
-            cars = new Car[carsCount];
-            Random random = new Random();
-
-            int i = 0;
-            foreach (Point start in startingPoints)
-            {
-                Random rand = new Random();
-                cars[i] = new Car(start.X, start.Y, possiblePaths);
-                //cars[i].setDestination(endPoints[rand.Next(endPoints.Count)]);
-                cars[i].setDestination(endPoints[rand.Next(endPoints.Count)]);
-                cars[i].color = new Color(random.Next(256), random.Next(256), random.Next(256), 255); ;
-                i++;
-                if (i == carsCount) break;
-            }
-
-        }
+       
 
         private void DrawRoads()
         {
@@ -342,6 +385,13 @@ namespace TrafficSimulator
                     String sd = brush.Split(":")[1];
                     double brushWidth = Convert.ToDouble(sd);
 
+                    string strokeColor = Array.Find(styles, brush => brush.Contains("stroke:"));
+                    string brushColorString = strokeColor.Split(":")[1];
+                    brushColorString = brushColorString.Substring(1);
+                    int r = int.Parse(brushColorString.Substring(0, 2), System.Globalization.NumberStyles.HexNumber);
+                    int g = int.Parse(brushColorString.Substring(2, 2), System.Globalization.NumberStyles.HexNumber);
+                    int b = int.Parse(brushColorString.Substring(4, 2), System.Globalization.NumberStyles.HexNumber);
+                    Color brushColor = new Color(r, g, b);
                     /*                    Console.WriteLine(sd);*/
                     string[] startPoint = instructions[1].Split(',');
                     string[] endPoint = instructions[instructions.Length - 1].Split(',');
@@ -401,6 +451,19 @@ namespace TrafficSimulator
                         boundaryPoints.Add(endP);
                     }
                     addRoad(startP, endP, brushWidth);
+                    if(brushColor == TrafficLightsArea1Color || brushColor == TrafficLightsArea2Color){
+                        int xDiff = (int)(endX - startX)/2;
+                        int yDiff = (int)(endY - startY)/2;
+                        int xCenter = (int)startX + xDiff;
+                        int yCenter = (int)startY + yDiff;
+                        if (brushColor == TrafficLightsArea1Color)
+                            TrafficLightsAreas[0].Add(startP, new TrafficLight(startP, endP, new Point(xCenter, yCenter)));
+                        else
+                        {
+                            TrafficLightsAreas[1].Add(startP, new TrafficLight(startP, endP, new Point(xCenter, yCenter)));
+                            TrafficLightsAreas[1][startP].switchLight();
+                        }
+                    }
                 }
                 else
                 {
@@ -458,7 +521,7 @@ namespace TrafficSimulator
         //BRUTE FORCE
         //TO DO
         Dictionary<Point, Dictionary<Point, List<Point>>> possiblePaths;
-        const int bruteDepth = 20;
+        const int bruteDepth = 25;
         private void createPossiblePaths()
         {
             possiblePaths = new Dictionary<Point, Dictionary<Point, List<Point>>>();
