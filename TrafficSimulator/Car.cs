@@ -22,7 +22,7 @@ namespace TrafficSimulator
         public Vector2 speedVect;
         private Vector2 speedVectCopy;
         public Point destination;
-        public Point nextJuntion;
+        public Point nextJunction;
         private Point posCopy;
         private Point destCopy;
         private Point nextDestCopy;
@@ -78,8 +78,8 @@ namespace TrafficSimulator
             destination = dest;
             path = new Queue<Point>(possiblePaths[position][dest]);
             path.Dequeue();
-            nextJuntion = path.Dequeue();
-            speedVect = new Vector2(Math.Sign(nextJuntion.X - position.X) * speed, Math.Sign(nextJuntion.Y - position.Y) * speed);
+            nextJunction = path.Dequeue();
+            speedVect = new Vector2(Math.Sign(nextJunction.X - position.X) * speed, Math.Sign(nextJunction.Y - position.Y) * speed);
             rotate();
 
         }
@@ -89,22 +89,22 @@ namespace TrafficSimulator
             turn = 0;
             if (speedVect.X > 0)
             {
-                if (destination.Y > nextDestination.Y)
+                if (destination.Y > nextJunction.Y)
                 {
                     turn = -1;
                 }
-                else if (destination.Y < nextDestination.Y)
+                else if (destination.Y < nextJunction.Y)
                 {
                     turn = 1;
                 }
             }
             else if (speedVect.X < 0)
             {
-                if (destination.Y > nextDestination.Y)
+                if (destination.Y > nextJunction.Y)
                 {
                     turn = 1;
                 }
-                else if (destination.Y < nextDestination.Y)
+                else if (destination.Y < nextJunction.Y)
                 {
                     turn = -1;
                 }
@@ -112,11 +112,11 @@ namespace TrafficSimulator
             }
             else if (speedVect.Y > 0)
             {
-                if (destination.X > nextDestination.X)
+                if (destination.X > nextJunction.X)
                 {
                     turn = 1;
                 }
-                else if (destination.X < nextDestination.X)
+                else if (destination.X < nextJunction.X)
                 {
                     turn = -1;
                 }
@@ -124,11 +124,11 @@ namespace TrafficSimulator
             }
             else if (speedVect.Y < 0)
             {
-                if (destination.X > nextDestination.X)
+                if (destination.X > nextJunction.X)
                 {
                     turn = -1;
                 }
-                else if (destination.X < nextDestination.X)
+                else if (destination.X < nextJunction.X)
                 {
                     turn = 1;
                 }
@@ -158,13 +158,13 @@ namespace TrafficSimulator
             double smallestDist = Double.MaxValue;
             double smallestContDist = Double.MaxValue;
             int xChange, yChange;
-            Point newNextJuntion = list.First();
+            Point newnextJunction = list.First();
             double distance1 = Math.Sqrt(Math.Pow(position.X - destination.X, 2) + Math.Pow(position.Y - destination.Y, 2));
             Boolean found = false;
             foreach (Point point in list)
             {
                 double distance2 = Math.Sqrt(Math.Pow(point.X - destination.X, 2) + Math.Pow(point.Y - destination.Y, 2));
-                if(distance2 < distance1 || distance2 < smallestDist)
+                if (distance2 < distance1 || distance2 < smallestDist)
                 {
                     try
                     {
@@ -175,18 +175,18 @@ namespace TrafficSimulator
                             {
                                 smallestContDist = distance3;
                                 smallestDist = distance2;
-                                newNextJuntion = point;
+                                newnextJunction = point;
                             }
                         }
                     }
                     catch
                     {
-                        if(point == destination)
+                        if (point == destination)
                         {
-                            newNextJuntion = point;
+                            newnextJunction = point;
                         }
                     }
-                        
+
                 }
                 //double distance3 = Double.MaxValue;
                 //try
@@ -194,26 +194,26 @@ namespace TrafficSimulator
                 //    foreach (Point cont in roadStructure[point])
                 //    {
                 //        distance3 = Math.Sqrt(Math.Pow(cont.X - destination.X, 2) + Math.Pow(point.Y - destination.X, 2));
-                //        if (Math.Sign(position.X - cont.X) == Math.Sign(position.X - nextJuntion.X) && Math.Sign(position.Y - cont.Y) == Math.Sign(position.Y - nextJuntion.Y))
+                //        if (Math.Sign(position.X - cont.X) == Math.Sign(position.X - nextJunction.X) && Math.Sign(position.Y - cont.Y) == Math.Sign(position.Y - nextJunction.Y))
                 //        {
                 //            smallestDist = distance3;
-                //            newNextJuntion = point;
+                //            newnextJunction = point;
                 //            found = true; break;
                 //        }
                 //    }
                 //}
                 //catch
                 //{
-                //    newNextJuntion = point;
+                //    newnextJunction = point;
                 //}
                 //if (!found)
                 //{
                 //    if (distance2 <= distance1 && distance2 < smallestDist);
-                //        newNextJuntion = point;
+                //        newnextJunction = point;
                 //}
             }
-            nextJuntion = newNextJuntion;
-            speedVect = new Vector2(Math.Sign(nextJuntion.X - position.X) * speed, Math.Sign(nextJuntion.Y - position.Y) * speed);
+            nextJunction = newnextJunction;
+            speedVect = new Vector2(Math.Sign(nextJunction.X - position.X) * speed, Math.Sign(nextJunction.Y - position.Y) * speed);
             rotate();
         }
 
@@ -243,93 +243,90 @@ namespace TrafficSimulator
 
 
 
-                foreach (Car car in cars)
-                {
-                    if (this != car)
-                    {
-                        // potrzeba wprowadzenia samefarow, czsami 2 samochody znikaja jednoczesnie
-                        if ((this.position.X + this.Size.X / 2 <= car.position.X + car.Size.X / 2 &&
-                            this.position.X + this.Size.X / 2 >= car.position.X - car.Size.X / 2 &&
-                            this.position.Y + this.Size.Y / 2 <= car.position.Y + car.Size.Y / 2 &&
-                            this.position.Y + this.Size.Y / 2 >= car.position.Y - car.Size.Y / 2)
-                            ||
-                            (this.position.X - this.Size.X / 2 <= car.position.X + car.Size.X / 2 &&
-                            this.position.X - this.Size.X / 2 >= car.position.X - car.Size.X / 2 &&
-                            this.position.Y - this.Size.Y / 2 <= car.position.Y + car.Size.Y / 2 &&
-                            this.position.Y - this.Size.Y / 2 >= car.position.Y - car.Size.Y / 2))
-                        {
-                            Console.WriteLine("kraksa");
-                            position = posCopy;
-                            destination = posCopy;
+                //foreach (Car car in cars)
+                //{
+                //    if (this != car)
+                //    {
+                //        // potrzeba wprowadzenia samefarow, czsami 2 samochody znikaja jednoczesnie
+                //        if ((this.position.X + this.Size.X / 2 <= car.position.X + car.Size.X / 2 &&
+                //            this.position.X + this.Size.X / 2 >= car.position.X - car.Size.X / 2 &&
+                //            this.position.Y + this.Size.Y / 2 <= car.position.Y + car.Size.Y / 2 &&
+                //            this.position.Y + this.Size.Y / 2 >= car.position.Y - car.Size.Y / 2)
+                //            ||
+                //            (this.position.X - this.Size.X / 2 <= car.position.X + car.Size.X / 2 &&
+                //            this.position.X - this.Size.X / 2 >= car.position.X - car.Size.X / 2 &&
+                //            this.position.Y - this.Size.Y / 2 <= car.position.Y + car.Size.Y / 2 &&
+                //            this.position.Y - this.Size.Y / 2 >= car.position.Y - car.Size.Y / 2))
+                //        {
+                //            Console.WriteLine("kraksa");
+                //            position = posCopy;
+                //            destination = posCopy;
 
-                            Random rand = new Random();
+                //            Random rand = new Random();
 
-                            List<Point> listOfNextDest = roadStructure[destination];
-                            nextDestination = listOfNextDest[rand.Next(0, listOfNextDest.Count())];
-                            setTurn();
+                //            List<Point> listOfNextDest = roadStructure[destination];
+                //            nextJunction = listOfNextDest[rand.Next(0, listOfNextDest.Count())];
+                //            setTurn();
 
-                            speedVect = speedVectCopy;
-                            rotate();
-                            break;
-                        }
-                    }
-                }
+                //            speedVect = speedVectCopy;
+                //            rotate();
+                //            break;
+                //        }
+                //    }
+                //}
 
 
-                if (Math.Sign(prevPosX - nextJuntion.X) != Math.Sign(position.X - nextJuntion.X) ||
-                    Math.Sign(prevPosY - nextJuntion.Y) != Math.Sign(position.Y - nextJuntion.Y))
+                if (Math.Sign(prevPosX - nextJunction.X) != Math.Sign(position.X - nextJunction.X) ||
+                    Math.Sign(prevPosY - nextJunction.Y) != Math.Sign(position.Y - nextJunction.Y))
                 {
                     Random rand = new Random();
 
-                    if (outOfMap)
+                    try
                     {
-                        Random rand = new Random();
-                        int distance = (int)(nextJuntion - position).ToVector2().Length();
-                        position = nextJuntion;
-                        nextJuntion = path.Dequeue();
-                        speedVect = new Vector2(Math.Sign(nextJuntion.X - position.X) * speed, Math.Sign(nextJuntion.Y - position.Y) * speed);
+                        int distance = (int)(nextJunction - position).ToVector2().Length();
+                        position = nextJunction;
+                        nextJunction = path.Dequeue();
+                        speedVect = new Vector2(Math.Sign(nextJunction.X - position.X) * speed, Math.Sign(nextJunction.Y - position.Y) * speed);
                         rotate();
                         setTurn();
 
-                        if (position.X != nextJuntion.X)
+                        if (position.X != nextJunction.X)
 
                         {
-                            speedVect.X = Math.Sign(nextJuntion.X - position.X) * speed;
-                            position.X += Math.Sign(nextJuntion.X - position.X) * distance;
+                            speedVect.X = Math.Sign(nextJunction.X - position.X) * speed;
+                            position.X += Math.Sign(nextJunction.X - position.X) * distance;
                             speedVect.Y = 0;
                         }
                         else
                         {
                             speedVect.X = 0;
-                            speedVect.Y = Math.Sign(nextJuntion.Y - position.Y) * speed;
-                            position.Y += Math.Sign(nextJuntion.Y - position.Y) * distance;
+                            speedVect.Y = Math.Sign(nextJunction.Y - position.Y) * speed;
+                            position.Y += Math.Sign(nextJunction.Y - position.Y) * distance;
                         }
                     }
                     catch
                     {
-                        Random rand = new Random();
                         position = startingPoints[rand.Next(startingPoints.Count)];
                         setDestination(endPoints[rand.Next(endPoints.Count)]);
                         //chooseNextJunction(roadStructure);
                     }
 
-                        if (!roadStructure.ContainsKey(destination))
-                        {
-                            outOfMap = true;
-                            turn = 0;
-                        }
-                        else
-                        {
-                            List<Point> listOfNextDest = roadStructure[destination];
-                            nextDestination = listOfNextDest[rand.Next(0, listOfNextDest.Count())];
-                            setTurn();
-                        }
-
-                        rotate();
-
+                    if (!roadStructure.ContainsKey(destination))
+                    {
+                        outOfMap = true;
+                        turn = 0;
                     }
+                    else
+                    {
+                        List<Point> listOfNextDest = roadStructure[destination];
+                        nextJunction = listOfNextDest[rand.Next(0, listOfNextDest.Count())];
+                        setTurn();
+                    }
+
+                    rotate();
+
                 }
-                Thread.Sleep(50);
+                Thread.Sleep(15);
             }
         }
     }

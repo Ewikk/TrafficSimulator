@@ -223,7 +223,7 @@ namespace TrafficSimulator
 
         private void setupCars()
         {
-            int carsCount = 3;
+            int carsCount = startingPoints.Count;
             cars = new Car[carsCount];
             Random random = new Random();
 
@@ -470,26 +470,32 @@ namespace TrafficSimulator
         //BRUTE FORCE
         //TO DO
         Dictionary<Point, Dictionary<Point, List<Point>>> possiblePaths;
-        const int bruteDepth = 15;
+        const int bruteDepth = 20;
         private void createPossiblePaths()
         {
-            possiblePaths = new Dictionary<Point, Dictionary<Point, List<Point>>> ();
+            possiblePaths = new Dictionary<Point, Dictionary<Point, List<Point>>>();
+            Thread[] threads = new Thread[startingPoints.Count];
+            int i = 0;
             foreach (Point start in startingPoints)
             {
-                bool isFirst = true;
-                foreach (Point end in endPoints)
+                threads[i] = new Thread(() =>
                 {
-                    List<Point> path = new List<Point>();
-                    path.Add(start);
-                    (List<Point>, int) foundPath = checkPath((path, 0), end, bruteDepth);
-                    if (isFirst)
+                    foreach (Point end in endPoints)
                     {
-                        possiblePaths.Add(start, new Dictionary<Point, List<Point>>());
-                        isFirst = false;
+                        List<Point> path = new List<Point>();
+                        path.Add(start);
+                        (List<Point>, int) foundPath = checkPath((path, 0), end, bruteDepth);
+                        if (!possiblePaths.ContainsKey(start))
+                        {
+                            possiblePaths.Add(start, new Dictionary<Point, List<Point>>());
+                        }
+                        possiblePaths[start].Add(end, foundPath.Item1);
                     }
-                    possiblePaths[start].Add(end, foundPath.Item1);
-                }
+                });
+                i++;
             }
+            foreach (Thread thread in threads) thread.Start();
+            foreach (Thread thread in threads) thread.Join();
         }
         private (List<Point>, int) checkPath((List<Point>, int) path, Point destination, int depth)
         {
