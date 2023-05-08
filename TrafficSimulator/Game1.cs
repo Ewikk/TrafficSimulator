@@ -604,7 +604,7 @@ namespace TrafficSimulator
         private (List<Point>, int) checkPath((List<Point>, int) path, Point destination, int depth, int bestLength)
         {
             iter++;
-            if (depth == 0 || path.Item2 > bestLength)
+            if (depth == 0 /*|| path.Item2 > bestLength*/)
             {
                 return (path.Item1, 0);
             }
