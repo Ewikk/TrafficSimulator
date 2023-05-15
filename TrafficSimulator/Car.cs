@@ -108,7 +108,7 @@ namespace TrafficSimulator
                     }
                     stopwatch.Restart();
                     stopwatch.Start();
-                    if (!IsMoveAllowed(trafficLights))
+                    if (!IsMoveAllowed(trafficLights, roadStructure))
                     {
                         Thread.Sleep(50);
                         continue;
@@ -194,9 +194,11 @@ namespace TrafficSimulator
             }
         }
 
-        private bool IsMoveAllowed(Dictionary<Point, TrafficLight>[] trafficLights)
+        private bool IsMoveAllowed(Dictionary<Point, TrafficLight>[] trafficLights, Dictionary<Point, List<Point>> roadStructure)
         {
-            return !CarCollisionDetected() && isLightGreen(trafficLights);
+            bool siema = !CarCollisionDetected() && isLightGreen(trafficLights);
+            bool witam = !rightHand(roadStructure) && !CarCollisionDetected() /*&& isLightGreen(trafficLights)*/;
+            return witam;
         }
 
         private bool isLightGreen(Dictionary<Point, TrafficLight>[] trafficLights)
@@ -209,6 +211,46 @@ namespace TrafficSimulator
                 }
             }
             return true;
+        }
+
+        private bool rightHand(Dictionary<Point, List<Point>> roadStructure)
+        {
+            Point next = this.nextJunction;
+            Point nextForward = new Point(0, 0);
+            try
+            {
+                foreach (Point P in roadStructure[next])
+                {
+                    int x = P.X - next.X;
+                    int y = P.Y - next.Y;
+                    if ((this.speedVect.X > 0 && x > 0) || (this.speedVect.Y > 0 && y > 0))
+                    {
+                        nextForward.X = P.X;
+                        nextForward.Y = P.Y;
+                        break;
+                    }
+                    else if ((this.speedVect.X < 0 && x < 0) || (this.speedVect.Y < 0 && y < 0))
+                    {
+                        nextForward.X = next.X;
+                        nextForward.Y = next.Y;
+                        break;
+                    }
+                }
+            }
+            catch { return false; }
+
+            foreach (Car car in cars)
+            {
+                if (this == car)
+                    continue;
+
+                Point distP = distancePoint(this, nextForward, car);
+                if (distP.X > 0 && distP.X < 100 && distP.Y == 0 && distance(position, next) < 50)
+                {
+                    return true;
+                }
+            }
+            return false;
         }
         private bool CarCollisionDetected()
         {
@@ -294,6 +336,35 @@ namespace TrafficSimulator
                 }
 
             }
+        }
+
+        public Point distancePoint(Car car, Point point, Car nextCar)
+        {
+            //Point(z boku, z frontu)
+            int x = 0;
+            int y = 0;
+            if (car.speedVect.X > 0)
+            {
+                x = nextCar.position.Y - point.Y;
+                y = nextCar.position.X - point.X;
+            }
+            else if (car.speedVect.X < 0)
+            {
+                x = point.Y - nextCar.position.Y;
+                y = point.X - nextCar.position.X;
+            }
+            else if (car.speedVect.Y > 0)
+            {
+                y = nextCar.position.Y - point.Y;
+                x = point.X - nextCar.position.X;
+            }
+            else if (car.speedVect.Y < 0)
+            {
+                y = point.Y - nextCar.position.Y;
+                x = nextCar.position.X - point.X;
+            }
+            Point distanceP = new Point(x, y);
+            return distanceP;
         }
 
     }
