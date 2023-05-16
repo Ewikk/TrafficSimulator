@@ -70,6 +70,7 @@ namespace TrafficSimulator
         private SpriteBatch _spriteBatch;
         private SpriteBatch _roadsBatch;
         private SpriteBatch _sidewalksBatch;
+        private SpriteBatch _pedestrianBatch;
         private SpriteBatch _testingBatch; // to be separated;
         private List<Rectangle> roadList = new List<Rectangle>();
         private List<Point> boundaryPoints = new List<Point>();
@@ -86,8 +87,10 @@ namespace TrafficSimulator
         private Dictionary<Point, List<Point>> sidewalkStructure = new Dictionary<Point, List<Point>>();
         private const string svgPath = "..\\..\\..\\final.svg";
         private const int scale = 7;
-
-
+        private Dictionary<Point, Dictionary<Point, List<Point>>> roadPaths;
+        const int roadBruteDepth = 25;
+        private Dictionary<Point, Dictionary<Point, List<Point>>> sidewalkPaths;
+        const int sidewalkBruteDepth = 25;
         //NEW FEATURE TESTING
         private Dictionary<Point, TrafficLight>[] TrafficLightsZones;/* = new Dictionary<Point, TrafficLight>();*/
         private static readonly Color TrafficLightsArea1Color = new Color(0, 128, 0);
@@ -123,24 +126,20 @@ namespace TrafficSimulator
             createMovementStructure(roadLineList, roadStructure, roadStartringPoints, roadEndPoints);
             createMovementStructure(sidewalkLineList, sidewalkStructure, sidewalkStartringPoints, sidewalkEndPoints);
             printRoadStructure();
-            createPossiblePaths();
+            roadPaths = createPossiblePaths(roadStructure, roadStartringPoints, roadEndPoints, roadBruteDepth);
+            //sidewalkPaths = createPossiblePaths(sidewalkStructure, sidewalkStartringPoints, sidewalkEndPoints, sidewalkBruteDepth);
             setupCars();
+            setupPedestrians();
 
-            foreach (Car car in cars)
-            {
-                if (car != null)
-                {
-                    //In general, the ThreadPool is optimized for short-lived, lightweight tasks that can be executed quickly, while the TaskScheduler is better suited for longer-running, more complex tasks Task was lagging
-                    //Task.Factory.StartNew(() => car.Move(roadStructure));
-                    Thread thread = new Thread(() => { car.Move(roadStructure, roadStartringPoints, roadEndPoints, TrafficLightsZones); });
-                    thread.Start();
-                    carThreads.Add(thread);
-                }
-            }
+            
+
+            
         }
 
         private Car[] cars;
         private List<Thread> carThreads = new List<Thread>();
+        private Pedestrian[] pedestrians;
+        private List<Thread> pedestrianThreads = new List<Thread>();
         private void setupCars()
         {
             int carsCount = roadStartringPoints.Count;
@@ -153,7 +152,7 @@ namespace TrafficSimulator
             foreach (Point start in roadStartringPoints)
             {
                 Random rand = new Random();
-                cars[i] = new Car(start.X, start.Y, possiblePaths);
+                cars[i] = new Car(start.X, start.Y, roadPaths);
                 //cars[i].setDestination(roadEndPoints[rand.Next(roadEndPoints.Count)]);
                 cars[i].setDestination(roadEndPoints[rand.Next(roadEndPoints.Count)]);
                 cars[i].color = new Color(random.Next(256), random.Next(256), random.Next(256), 255);
@@ -161,6 +160,48 @@ namespace TrafficSimulator
                 cars[i].cars = cars;
                 i++;
                 if (i == carsCount) break;
+            }
+            foreach (Car car in cars)
+            {
+                if (car != null)
+                {
+                    //In general, the ThreadPool is optimized for short-lived, lightweight tasks that can be executed quickly, while the TaskScheduler is better suited for longer-running, more complex tasks Task was lagging
+                    //Task.Factory.StartNew(() => car.Move(roadStructure));
+                    Thread thread = new Thread(() => { car.Move(roadStructure, roadStartringPoints, roadEndPoints, TrafficLightsZones); });
+                    thread.Start();
+                    carThreads.Add(thread);
+                }
+            }
+
+        }
+
+        //TO BE DELETED
+        private void setupPedestrians()
+        {
+            int pedestrianCount = sidewalkStartringPoints.Count;
+            pedestrianCount = 300;
+            pedestrians = new Pedestrian[pedestrianCount];
+            Random random = new Random();
+
+            int i = 0;
+            if (pedestrianCount == 0) return;
+            Random rand = new Random();
+
+            for (int j = 0; j < pedestrianCount; j++) {
+                Point start = sidewalkStartringPoints[rand.Next(sidewalkStartringPoints.Count)];
+                pedestrians[i] = new Pedestrian(start.X, start.Y, sidewalkPaths);
+                //cars[i].setDestination(roadEndPoints[rand.Next(roadEndPoints.Count)]);
+                pedestrians[i].setDestination(sidewalkEndPoints[rand.Next(sidewalkEndPoints.Count)]);
+                pedestrians[i].color = new Color(random.Next(256), random.Next(256), random.Next(256), 255);
+                //TEMP
+                i++;
+                if (i == pedestrianCount) break;
+            }
+            foreach (Pedestrian pedestrian in pedestrians)
+            {
+                Thread thread = new Thread(() => { pedestrian.Move(sidewalkStructure, sidewalkStartringPoints, sidewalkEndPoints); });
+                thread.Start();
+                pedestrianThreads.Add(thread);
             }
 
         }
@@ -171,6 +212,7 @@ namespace TrafficSimulator
             _roadsBatch = new SpriteBatch(GraphicsDevice);
             _sidewalksBatch = new SpriteBatch(GraphicsDevice);
             _testingBatch = new SpriteBatch(GraphicsDevice);
+            _pedestrianBatch = new SpriteBatch(GraphicsDevice);
             rect = new Texture2D(_graphics.GraphicsDevice, 1, 1);
             rect.SetData(new[] { Color.White });
             circle = this.Content.Load<Texture2D>("circle");
@@ -250,6 +292,10 @@ namespace TrafficSimulator
         protected override void OnExiting(object sender, EventArgs args)
         {
             foreach (Thread thread in carThreads)
+            {
+                thread.Interrupt();
+            }
+            foreach (Thread thread in pedestrianThreads)
             {
                 thread.Interrupt();
             }
@@ -339,6 +385,14 @@ namespace TrafficSimulator
                 }
             }
             _spriteBatch.End();
+
+            _pedestrianBatch.Begin();
+            int pedestrianSize = 10;
+            foreach(Pedestrian pedestrian in pedestrians)
+            {
+                _pedestrianBatch.Draw(circle, new Rectangle(pedestrian.position.X - pedestrianSize/2, pedestrian.position.Y - pedestrianSize / 2, pedestrianSize, pedestrianSize), pedestrian.color);
+            }
+            _pedestrianBatch.End();
             _testingBatch.Begin();
             foreach (var area in TrafficLightsZones)
             {
@@ -610,24 +664,97 @@ namespace TrafficSimulator
 
 
 
+        ////BRUTE FORCE
+        ////TO DO
+        //Dictionary<Point, Dictionary<Point, List<Point>>> possiblePaths;
+        //const int bruteDepth = 25;
+        //private void createPossiblePaths()
+        //{
+        //    possiblePaths = new Dictionary<Point, Dictionary<Point, List<Point>>>();
+        //    Thread[] threads = new Thread[roadStartringPoints.Count];
+        //    int i = 0;
+        //    foreach (Point start in roadStartringPoints)
+        //    {
+        //        threads[i] = new Thread(() =>
+        //        {
+        //            foreach (Point end in roadEndPoints)
+        //            {
+        //                List<Point> path = new List<Point>();
+        //                path.Add(start);
+        //                (List<Point>, int) foundPath = checkPath((path, 0), end, bruteDepth, int.MaxValue);
+        //                if (!possiblePaths.ContainsKey(start))
+        //                {
+        //                    possiblePaths.Add(start, new Dictionary<Point, List<Point>>());
+        //                }
+        //                possiblePaths[start].Add(end, foundPath.Item1);
+        //            }
+        //        });
+        //        i++;
+        //    }
+        //    foreach (Thread thread in threads) thread.Start();
+        //    foreach (Thread thread in threads)
+        //    {
+        //        thread.Join();
+        //        Console.WriteLine("Thread joined");
+        //    }
+        //    Console.WriteLine(iter);
+        //}
+        //public int iter = 0;
+        //private (List<Point>, int) checkPath((List<Point>, int) path, Point destination, int depth, int bestLength)
+        //{
+        //    iter++;
+        //    if (depth == 0 /*|| path.Item2 > bestLength*/)
+        //    {
+        //        return (path.Item1, 0);
+        //    }
+        //    int shortestPath = bestLength;
+        //    (List<Point>, int) result = (path.Item1, 0);
+        //    try
+        //    {
+        //        foreach (Point point in roadStructure[path.Item1.Last()])
+        //        {
+        //            List<Point> points = new List<Point>(path.Item1);
+        //            int length = path.Item2 + Math.Abs(point.X - path.Item1.Last().X + point.Y - path.Item1.Last().Y);
+        //            points.Add(point);
+        //            if (point == destination)
+        //                return (points, path.Item2 + length);
+        //            (List<Point>, int) foundPath = checkPath((points, path.Item2 + length), destination, depth - 1, shortestPath);
+        //            if (foundPath.Item2 > 0)
+        //            {
+        //                if (foundPath.Item2 < shortestPath)
+        //                {
+        //                    shortestPath = foundPath.Item2;
+        //                    result = foundPath;
+        //                }
+        //            }
+        //        }
+        //        return result;
+        //    }
+        //    catch
+        //    {
+        //        return (path.Item1, 0);
+        //    }
+
+
+        //}
+
         //BRUTE FORCE
         //TO DO
-        Dictionary<Point, Dictionary<Point, List<Point>>> possiblePaths;
-        const int bruteDepth = 25;
-        private void createPossiblePaths()
+        const int SidewalkBruteDepth = 25;
+        private Dictionary<Point, Dictionary<Point, List<Point>>> createPossiblePaths(Dictionary<Point, List<Point>> structure, List<Point> startingPoints, List<Point> endPoints, int depth = 25)
         {
-            possiblePaths = new Dictionary<Point, Dictionary<Point, List<Point>>>();
-            Thread[] threads = new Thread[roadStartringPoints.Count];
+            Dictionary<Point, Dictionary<Point, List<Point>>> possiblePaths = new Dictionary<Point, Dictionary<Point, List<Point>>>();
+            Thread[] threads = new Thread[startingPoints.Count];
             int i = 0;
-            foreach (Point start in roadStartringPoints)
+            foreach (Point start in startingPoints)
             {
                 threads[i] = new Thread(() =>
                 {
-                    foreach (Point end in roadEndPoints)
+                    foreach (Point end in endPoints)
                     {
                         List<Point> path = new List<Point>();
                         path.Add(start);
-                        (List<Point>, int) foundPath = checkPath((path, 0), end, bruteDepth, int.MaxValue);
+                        (List<Point>, int) foundPath = checkPath(structure, (path, 0), end, depth, int.MaxValue);
                         if (!possiblePaths.ContainsKey(start))
                         {
                             possiblePaths.Add(start, new Dictionary<Point, List<Point>>());
@@ -644,9 +771,10 @@ namespace TrafficSimulator
                 Console.WriteLine("Thread joined");
             }
             Console.WriteLine(iter);
+            return possiblePaths;
         }
         public int iter = 0;
-        private (List<Point>, int) checkPath((List<Point>, int) path, Point destination, int depth, int bestLength)
+        private (List<Point>, int) checkPath(Dictionary<Point, List<Point>> structure, (List<Point>, int) path, Point destination, int depth, int bestLength)
         {
             iter++;
             if (depth == 0 /*|| path.Item2 > bestLength*/)
@@ -657,14 +785,14 @@ namespace TrafficSimulator
             (List<Point>, int) result = (path.Item1, 0);
             try
             {
-                foreach (Point point in roadStructure[path.Item1.Last()])
+                foreach (Point point in structure[path.Item1.Last()])
                 {
                     List<Point> points = new List<Point>(path.Item1);
                     int length = path.Item2 + Math.Abs(point.X - path.Item1.Last().X + point.Y - path.Item1.Last().Y);
                     points.Add(point);
                     if (point == destination)
                         return (points, path.Item2 + length);
-                    (List<Point>, int) foundPath = checkPath((points, path.Item2 + length), destination, depth - 1, shortestPath);
+                    (List<Point>, int) foundPath = checkPath(structure, (points, path.Item2 + length), destination, depth - 1, shortestPath);
                     if (foundPath.Item2 > 0)
                     {
                         if (foundPath.Item2 < shortestPath)
