@@ -79,15 +79,17 @@ namespace TrafficSimulator
         private Texture2D rect; //Texture used to draw rectangles
         private Texture2D circle; //Texture used to draw circles
         private Dictionary<Point, List<Point>> roadStructure = new Dictionary<Point, List<Point>>();
-        private List<Point> startingPoints = new List<Point>();
-        private List<Point> endPoints = new List<Point>();
+        private List<Point> roadStartringPoints = new List<Point>();
+        private List<Point> roadEndPoints = new List<Point>();
+        private List<Point> sidewalkStartringPoints = new List<Point>();
+        private List<Point> sidewalkEndPoints = new List<Point>();
         private Dictionary<Point, List<Point>> sidewalkStructure = new Dictionary<Point, List<Point>>();
         private const string svgPath = "..\\..\\..\\final.svg";
         private const int scale = 7;
 
 
         //NEW FEATURE TESTING
-        private Dictionary<Point, TrafficLight>[] TrafficLightsAreas;/* = new Dictionary<Point, TrafficLight>();*/
+        private Dictionary<Point, TrafficLight>[] TrafficLightsZones;/* = new Dictionary<Point, TrafficLight>();*/
         private static readonly Color TrafficLightsArea1Color = new Color(0, 128, 0);
         private static readonly Color TrafficLightsArea2Color = new Color(255, 0, 0);
 
@@ -107,10 +109,10 @@ namespace TrafficSimulator
         {
             // TODO: Add your initialization logic here
             base.Initialize();
-            TrafficLightsAreas = new Dictionary<Point, TrafficLight>[2];
-            for (int i = 0; i < TrafficLightsAreas.Length; i++)
+            TrafficLightsZones = new Dictionary<Point, TrafficLight>[2];
+            for (int i = 0; i < TrafficLightsZones.Length; i++)
             {
-                TrafficLightsAreas[i] = new Dictionary<Point, TrafficLight>();
+                TrafficLightsZones[i] = new Dictionary<Point, TrafficLight>();
             }
             ReadSVG();
             Console.WriteLine("zaczynam pisac");
@@ -118,7 +120,8 @@ namespace TrafficSimulator
             {
                 Console.WriteLine(punkt.X + " " + punkt.Y);
             }
-            createRoadStructure();
+            createMovementStructure(roadLineList, roadStructure, roadStartringPoints, roadEndPoints);
+            createMovementStructure(sidewalkLineList, sidewalkStructure, sidewalkStartringPoints, sidewalkEndPoints);
             printRoadStructure();
             createPossiblePaths();
             setupCars();
@@ -129,7 +132,7 @@ namespace TrafficSimulator
                 {
                     //In general, the ThreadPool is optimized for short-lived, lightweight tasks that can be executed quickly, while the TaskScheduler is better suited for longer-running, more complex tasks Task was lagging
                     //Task.Factory.StartNew(() => car.Move(roadStructure));
-                    Thread thread = new Thread(() => { car.Move(roadStructure, startingPoints, endPoints, TrafficLightsAreas); });
+                    Thread thread = new Thread(() => { car.Move(roadStructure, roadStartringPoints, roadEndPoints, TrafficLightsZones); });
                     thread.Start();
                     carThreads.Add(thread);
                 }
@@ -140,19 +143,19 @@ namespace TrafficSimulator
         private List<Thread> carThreads = new List<Thread>();
         private void setupCars()
         {
-            int carsCount = startingPoints.Count;
+            int carsCount = roadStartringPoints.Count;
             //carsCount = 2;
             cars = new Car[carsCount];
             Random random = new Random();
 
             int i = 0;
             if (carsCount == 0) return;
-            foreach (Point start in startingPoints)
+            foreach (Point start in roadStartringPoints)
             {
                 Random rand = new Random();
                 cars[i] = new Car(start.X, start.Y, possiblePaths);
-                //cars[i].setDestination(endPoints[rand.Next(endPoints.Count)]);
-                cars[i].setDestination(endPoints[rand.Next(endPoints.Count)]);
+                //cars[i].setDestination(roadEndPoints[rand.Next(roadEndPoints.Count)]);
+                cars[i].setDestination(roadEndPoints[rand.Next(roadEndPoints.Count)]);
                 cars[i].color = new Color(random.Next(256), random.Next(256), random.Next(256), 255);
                 //TEMP
                 cars[i].cars = cars;
@@ -188,7 +191,7 @@ namespace TrafficSimulator
             if (Keyboard.GetState().IsKeyDown(Keys.Space) && !spacePressed)
             {
                 spacePressed = true;
-                foreach (var area in TrafficLightsAreas)
+                foreach (var area in TrafficLightsZones)
                 {
                     foreach (var light in area)
                     {
@@ -216,7 +219,7 @@ namespace TrafficSimulator
                 {
                     timeSinceLastSwitch = 0;
                     cooldown = 1;
-                    foreach (var area in TrafficLightsAreas)
+                    foreach (var area in TrafficLightsZones)
                     {
                         if (area.First().Value.isOpen)
                         {
@@ -314,11 +317,19 @@ namespace TrafficSimulator
             //}
             if (!Debugger.IsAttached)
             {
-                foreach (Point start in startingPoints)
+                foreach (Point start in roadStartringPoints)
                 {
                     _spriteBatch.Draw(rect, new Rectangle(start.X - 5, start.Y - 5, 10, 10), Color.Green);
                 }
-                //foreach (Point start in endPoints)
+                foreach (Point start in sidewalkStartringPoints)
+                {
+                    _spriteBatch.Draw(rect, new Rectangle(start.X - 5, start.Y - 5, 10, 10), Color.Green);
+                }
+                foreach (Point end in sidewalkEndPoints)
+                {
+                    _spriteBatch.Draw(rect, new Rectangle(end.X - 5, end.Y - 5, 10, 10), Color.Red);
+                }
+                //foreach (Point start in roadEndPoints)
                 //{
                 //    _spriteBatch.Draw(rect, new Rectangle(start.X - 5, start.Y - 5, 10, 10), Color.Red);
                 //}
@@ -329,7 +340,7 @@ namespace TrafficSimulator
             }
             _spriteBatch.End();
             _testingBatch.Begin();
-            foreach (var area in TrafficLightsAreas)
+            foreach (var area in TrafficLightsZones)
             {
                 foreach (var light in area)
                 {
@@ -365,22 +376,56 @@ namespace TrafficSimulator
             _sidewalksBatch.End();
         }
 
-        private void createRoadStructure()
+        //private void createRoadStructure()
+        //{
+        //    foreach (Line line in roadLineList)
+        //    {
+        //        if (!roadStructure.ContainsKey(line.start))
+        //        {
+        //            roadStructure.Add(line.start, new List<Point>());
+        //        }
+        //        roadStructure[line.start].Add(line.end);
+        //    }
+
+        //    foreach (Line line in roadLineList)
+        //    {
+        //        if (!roadStructure.ContainsKey(line.end)) roadEndPoints.Add(line.end);
+        //        Boolean DupFound = false;
+        //        foreach (var road in roadStructure)
+        //        {
+        //            if (road.Value.Contains(line.start))
+        //            {
+        //                DupFound = true;
+        //                break;
+        //            }
+        //        }
+        //        if (!DupFound) roadStartringPoints.Add(line.start);
+        //    }
+        //    if (!Debugger.IsAttached)
+        //    {
+        //        Console.WriteLine("Starting Points:");
+        //        Console.WriteLine(roadStartringPoints.Count);
+        //        foreach (Point start in roadStartringPoints) Console.WriteLine(start.ToString());
+        //        Console.WriteLine("End");
+        //    }
+        //}
+
+        private void createMovementStructure(List<Line> lineList,Dictionary<Point, List<Point>> structure, List<Point> startingPoints, List<Point> endPoints)
         {
-            foreach (Line line in roadLineList)
+            foreach (Line line in lineList)
             {
-                if (!roadStructure.ContainsKey(line.start))
+                if (!structure.ContainsKey(line.start))
                 {
-                    roadStructure.Add(line.start, new List<Point>());
+                    structure.Add(line.start, new List<Point>());
                 }
-                roadStructure[line.start].Add(line.end);
+                structure[line.start].Add(line.end);
             }
 
-            foreach (Line line in roadLineList)
+            foreach (Line line in lineList)
             {
-                if (!roadStructure.ContainsKey(line.end)) endPoints.Add(line.end);
+                if (!structure.ContainsKey(line.end)) endPoints.Add(line.end);
                 Boolean DupFound = false;
-                foreach (var road in roadStructure)
+                foreach (var road in structure)
                 {
                     if (road.Value.Contains(line.start))
                     {
@@ -504,11 +549,11 @@ namespace TrafficSimulator
                         int xCenter = (int)startX + xDiff;
                         int yCenter = (int)startY + yDiff;
                         if (brushColor == TrafficLightsArea1Color)
-                            TrafficLightsAreas[0].Add(startP, new TrafficLight(startP, endP, new Point(xCenter, yCenter)));
+                            TrafficLightsZones[0].Add(startP, new TrafficLight(startP, endP, new Point(xCenter, yCenter)));
                         else
                         {
-                            TrafficLightsAreas[1].Add(startP, new TrafficLight(startP, endP, new Point(xCenter, yCenter)));
-                            TrafficLightsAreas[1][startP].switchLight();
+                            TrafficLightsZones[1].Add(startP, new TrafficLight(startP, endP, new Point(xCenter, yCenter)));
+                            TrafficLightsZones[1][startP].switchLight();
                         }
                     }
                 }
@@ -572,13 +617,13 @@ namespace TrafficSimulator
         private void createPossiblePaths()
         {
             possiblePaths = new Dictionary<Point, Dictionary<Point, List<Point>>>();
-            Thread[] threads = new Thread[startingPoints.Count];
+            Thread[] threads = new Thread[roadStartringPoints.Count];
             int i = 0;
-            foreach (Point start in startingPoints)
+            foreach (Point start in roadStartringPoints)
             {
                 threads[i] = new Thread(() =>
                 {
-                    foreach (Point end in endPoints)
+                    foreach (Point end in roadEndPoints)
                     {
                         List<Point> path = new List<Point>();
                         path.Add(start);
