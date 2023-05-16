@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.Rebar;
 
 namespace TrafficSimulator
@@ -196,31 +197,33 @@ namespace TrafficSimulator
 
         private bool IsMoveAllowed(Dictionary<Point, TrafficLight>[] trafficLights, Dictionary<Point, List<Point>> roadStructure)
         {
-            bool allow = !CarCollisionDetected() && isLightGreen(trafficLights);
-            /*            if (allow == false)
-                        {
-                            bool flag = true;
-                            foreach (var area in trafficLights)
-                            {
-                                if (area.ContainsKey(nextJunction) && distance(nextJunction, position) < 20)
-                                {
-                                    flag = false;
-                                }
-                            }
-                            if (flag == true)
-                            {
-                                allow = !rightHand(roadStructure) && !CarCollisionDetected();
-                            }
-                        }*/
-            //bool allow = !rightHand(roadStructure) && !CarCollisionDetected();
-            return allow;
+            List<Point> rownorzedne = new List<Point>();
+            rownorzedne.Add(new Point(1289, 617));
+            rownorzedne.Add(new Point(1289, 580));
+            rownorzedne.Add(new Point(1327, 617));
+            rownorzedne.Add(new Point(1327, 580));
+
+            rownorzedne.Add(new Point(1289, 163));
+            rownorzedne.Add(new Point(1289, 126));
+            rownorzedne.Add(new Point(1327, 163));
+            rownorzedne.Add(new Point(1327, 126));
+
+            int distanceBetweenCars = (int)Math.Sqrt(speed * 1.5);
+            if (rownorzedne.Contains(nextJunction))
+            {
+                return !CarCollisionDetected(distanceBetweenCars) && !rightHand(roadStructure, 2 * distanceBetweenCars);
+            }
+            else
+            {
+                return !CarCollisionDetected(distanceBetweenCars) && isLightGreen(trafficLights, distanceBetweenCars);
+            }
         }
 
-        private bool isLightGreen(Dictionary<Point, TrafficLight>[] trafficLights)
+        private bool isLightGreen(Dictionary<Point, TrafficLight>[] trafficLights, int distanceBetweenCars)
         {
             foreach (var area in trafficLights)
             {
-                if (area.ContainsKey(nextJunction) && !area[nextJunction].isOpen && distance(nextJunction, position) < 20)
+                if (area.ContainsKey(nextJunction) && !area[nextJunction].isOpen && distance(nextJunction, position) < distanceBetweenCars && distance(nextJunction, position) > distanceBetweenCars / 2)
                 {
                     return false;
                 }
@@ -228,7 +231,7 @@ namespace TrafficSimulator
             return true;
         }
 
-        private bool rightHand(Dictionary<Point, List<Point>> roadStructure)
+        private bool rightHand(Dictionary<Point, List<Point>> roadStructure, int distanceBetweenCars)
         {
             Point next = this.nextJunction;
             Point nextForward = new Point(0, 0);
@@ -260,14 +263,14 @@ namespace TrafficSimulator
                     continue;
 
                 Point distP = distancePoint(this, nextForward, car);
-                if (distP.X > 0 && distP.X < 100 && distP.Y == 0 && distance(position, next) < 100)
+                if (distP.X > 0 && distP.X < distanceBetweenCars && distP.Y == 0 && distance(position, next) < distanceBetweenCars)
                 {
                     return true;
                 }
             }
             return false;
         }
-        private bool CarCollisionDetected()
+        private bool CarCollisionDetected(int distanceBetweenCars)
         {
             foreach (Car car in cars)
             {
@@ -278,32 +281,50 @@ namespace TrafficSimulator
                 int ownPos = 0;
                 int pos2 = 0;
                 //TO simplify
-                int distanceBetweenCars = 10;
-                if (speedVect.X != 0 && car.position.Y - position.Y < car.Size.Y/2 + this.Size.Y / 2 && car.position.Y - position.Y > - (car.Size.Y / 2 + this.Size.Y / 2))
+                bool collison = false;
+                if (speedVect.X != 0 && Math.Abs(car.position.Y - position.Y) < car.Size.Y / 2 + this.Size.Y / 2)
                 {
                     sp = speedVect.X;
                     ownPos = position.X;
                     pos2 = car.position.X;
 
-                    if (sp > 0 && pos2 - ownPos <= car.Size.X / 2 + this.Size.X / 2 + distanceBetweenCars && pos2 - ownPos >= car.Size.X / 2 + this.Size.X / 2 ||
-                        sp < 0 && ownPos - pos2 <= car.Size.X / 2 + this.Size.X / 2 + distanceBetweenCars && ownPos - pos2 >= car.Size.X / 2 + this.Size.X / 2)
+                    if (sp > 0 && pos2 - ownPos < car.Size.X / 2 + this.Size.X / 2 + distanceBetweenCars && pos2 - ownPos > 0 ||
+                        sp < 0 && ownPos - pos2 < car.Size.X / 2 + this.Size.X / 2 + distanceBetweenCars && ownPos - pos2 > 0)
                     {
-                        return true;
+                        collison = true;
                     }
                 }
-                else if (speedVect.Y != 0 && car.position.X - position.X < car.Size.X / 2 + this.Size.X / 2 && car.position.X - position.X > -(car.Size.X / 2 + this.Size.X / 2))
+                else if (speedVect.Y != 0 && Math.Abs(car.position.X - position.X) < car.Size.X / 2 + this.Size.X / 2)
                 {
                     sp = speedVect.Y;
                     ownPos = position.Y;
                     pos2 = car.position.Y;
 
-                    if (sp > 0 && pos2 - ownPos <= car.Size.Y / 2 + this.Size.Y / 2 + distanceBetweenCars && pos2 - ownPos >= car.Size.Y / 2 + this.Size.Y / 2 ||
-                       sp < 0 && ownPos - pos2 <= car.Size.Y / 2 + this.Size.Y / 2 + distanceBetweenCars && ownPos - pos2 >= car.Size.Y / 2 + this.Size.Y / 2)
+                    if (sp > 0 && pos2 - ownPos < car.Size.Y / 2 + this.Size.Y / 2 + distanceBetweenCars && pos2 - ownPos > 0 ||
+                       sp < 0 && ownPos - pos2 < car.Size.Y / 2 + this.Size.Y / 2 + distanceBetweenCars && ownPos - pos2 > 0)
                     {
-                        return true;
+                        collison = true;
                     }
                 }
-                
+
+                if (collison)
+                {
+                    if ((this.position.X + this.Size.X / 2 < car.position.X + car.Size.X / 2 &&
+                                this.position.X + this.Size.X / 2 > car.position.X - car.Size.X / 2 &&
+                                this.position.Y + this.Size.Y / 2 < car.position.Y + car.Size.Y / 2 &&
+                                this.position.Y + this.Size.Y / 2 > car.position.Y - car.Size.Y / 2)
+                                ||
+                                (this.position.X - this.Size.X / 2 < car.position.X + car.Size.X / 2 &&
+                                this.position.X - this.Size.X / 2 > car.position.X - car.Size.X / 2 &&
+                                this.position.Y - this.Size.Y / 2 < car.position.Y + car.Size.Y / 2 &&
+                                this.position.Y - this.Size.Y / 2 > car.position.Y - car.Size.Y / 2))
+                    {
+                        Console.WriteLine("kraksa");
+                        //collison = false;
+                    }
+                    return collison;
+                }
+
             }
             return false;
         }
