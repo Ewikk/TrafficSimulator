@@ -196,9 +196,24 @@ namespace TrafficSimulator
 
         private bool IsMoveAllowed(Dictionary<Point, TrafficLight>[] trafficLights, Dictionary<Point, List<Point>> roadStructure)
         {
-            bool siema = !CarCollisionDetected() && isLightGreen(trafficLights);
-            bool witam = !rightHand(roadStructure) && !CarCollisionDetected() /*&& isLightGreen(trafficLights)*/;
-            return witam;
+            bool allow = !CarCollisionDetected() && isLightGreen(trafficLights);
+            /*            if (allow == false)
+                        {
+                            bool flag = true;
+                            foreach (var area in trafficLights)
+                            {
+                                if (area.ContainsKey(nextJunction) && distance(nextJunction, position) < 20)
+                                {
+                                    flag = false;
+                                }
+                            }
+                            if (flag == true)
+                            {
+                                allow = !rightHand(roadStructure) && !CarCollisionDetected();
+                            }
+                        }*/
+            //bool allow = !rightHand(roadStructure) && !CarCollisionDetected();
+            return allow;
         }
 
         private bool isLightGreen(Dictionary<Point, TrafficLight>[] trafficLights)
@@ -245,7 +260,7 @@ namespace TrafficSimulator
                     continue;
 
                 Point distP = distancePoint(this, nextForward, car);
-                if (distP.X > 0 && distP.X < 100 && distP.Y == 0 && distance(position, next) < 50)
+                if (distP.X > 0 && distP.X < 100 && distP.Y == 0 && distance(position, next) < 100)
                 {
                     return true;
                 }
@@ -263,23 +278,32 @@ namespace TrafficSimulator
                 int ownPos = 0;
                 int pos2 = 0;
                 //TO simplify
-                if (speedVect.X != 0 && position.Y == car.position.Y)
+                int distanceBetweenCars = 10;
+                if (speedVect.X != 0 && car.position.Y - position.Y < car.Size.Y/2 + this.Size.Y / 2 && car.position.Y - position.Y > - (car.Size.Y / 2 + this.Size.Y / 2))
                 {
                     sp = speedVect.X;
                     ownPos = position.X;
                     pos2 = car.position.X;
+
+                    if (sp > 0 && pos2 - ownPos <= car.Size.X / 2 + this.Size.X / 2 + distanceBetweenCars && pos2 - ownPos >= car.Size.X / 2 + this.Size.X / 2 ||
+                        sp < 0 && ownPos - pos2 <= car.Size.X / 2 + this.Size.X / 2 + distanceBetweenCars && ownPos - pos2 >= car.Size.X / 2 + this.Size.X / 2)
+                    {
+                        return true;
+                    }
                 }
-                else if (speedVect.Y != 0 && position.X == car.position.X)
+                else if (speedVect.Y != 0 && car.position.X - position.X < car.Size.X / 2 + this.Size.X / 2 && car.position.X - position.X > -(car.Size.X / 2 + this.Size.X / 2))
                 {
                     sp = speedVect.Y;
                     ownPos = position.Y;
                     pos2 = car.position.Y;
+
+                    if (sp > 0 && pos2 - ownPos <= car.Size.Y / 2 + this.Size.Y / 2 + distanceBetweenCars && pos2 - ownPos >= car.Size.Y / 2 + this.Size.Y / 2 ||
+                       sp < 0 && ownPos - pos2 <= car.Size.Y / 2 + this.Size.Y / 2 + distanceBetweenCars && ownPos - pos2 >= car.Size.Y / 2 + this.Size.Y / 2)
+                    {
+                        return true;
+                    }
                 }
-                if (sp > 0 && pos2 - ownPos < 50 && pos2 - ownPos > 0 ||
-                       sp < 0 && ownPos - pos2 < 50 && ownPos - pos2 > 0)
-                {
-                    return true;
-                }
+                
             }
             return false;
         }
