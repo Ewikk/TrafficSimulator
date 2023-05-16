@@ -16,6 +16,7 @@ using System.Threading.Tasks;
 using System.Collections;
 using SharpDX.MediaFoundation;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.Rebar;
+using System.Net;
 //using System.Drawing;
 
 
@@ -81,6 +82,8 @@ namespace TrafficSimulator
         private Dictionary<Point, List<Point>> roadStructure = new Dictionary<Point, List<Point>>();
         private List<Point> startingPoints = new List<Point>();
         private List<Point> endPoints = new List<Point>();
+        private List<Point> startingPointsHumans = new List<Point>();
+        private List<Point> endPointsHumans = new List<Point>();
         private Dictionary<Point, List<Point>> sidewalkStructure = new Dictionary<Point, List<Point>>();
         private const string svgPath = "..\\..\\..\\final.svg";
         private const int scale = 7;
@@ -119,9 +122,13 @@ namespace TrafficSimulator
                 Console.WriteLine(punkt.X + " " + punkt.Y);
             }
             createRoadStructure();
+            createSidewalkStructure();
             printRoadStructure();
+            printSidewalkStructure();
             createPossiblePaths();
+            createPossiblePathsHumans();
             setupCars();
+            setupHumans();
 
             foreach (Car car in cars)
             {
@@ -132,6 +139,18 @@ namespace TrafficSimulator
                     Thread thread = new Thread(() => { car.Move(roadStructure, startingPoints, endPoints, TrafficLightsAreas); });
                     thread.Start();
                     carThreads.Add(thread);
+                }
+            }
+
+            foreach (Human human in humans)
+            {
+                if (human != null)
+                {
+                    //In general, the ThreadPool is optimized for short-lived, lightweight tasks that can be executed quickly, while the TaskScheduler is better suited for longer-running, more complex tasks Task was lagging
+                    //Task.Factory.StartNew(() => car.Move(roadStructure));
+                    Thread threadHumans = new Thread(() => { human.Move(sidewalkStructure, startingPointsHumans, endPointsHumans, TrafficLightsAreas); });
+                    threadHumans.Start();
+                    humanThreads.Add(threadHumans);
                 }
             }
         }
@@ -158,6 +177,32 @@ namespace TrafficSimulator
                 cars[i].cars = cars;
                 i++;
                 if (i == carsCount) break;
+            }
+
+        }
+
+        private Human[] humans;
+        private List<Thread> humanThreads = new List<Thread>();
+        private void setupHumans()
+        {
+            //int humansCount = startingPointsHumans.Count;
+            int humansCount = 2;
+            humans = new Human[humansCount];
+            Random random = new Random();
+
+            int j = 0;
+            if (humansCount == 0) return;
+            foreach (Point start in startingPointsHumans)
+            {
+                Random rand = new Random();
+                humans[j] = new Human(start.X, start.Y, possiblePathsHumans);
+                //cars[i].setDestination(endPoints[rand.Next(endPoints.Count)]);
+                humans[j].setDestination(endPointsHumans[rand.Next(endPointsHumans.Count)]); //rand.Next(endPointsHumans.Count)
+                humans[j].color = new Color(random.Next(256), random.Next(256), random.Next(256), 255);
+                //TEMP
+                humans[j].humans = humans;
+                j++;
+                if (j == humansCount) break;
             }
 
         }
@@ -250,6 +295,10 @@ namespace TrafficSimulator
             {
                 thread.Interrupt();
             }
+            foreach (Thread thread in humanThreads)
+            {
+                thread.Interrupt();
+            }
             base.OnExiting(sender, args);
         }
 
@@ -308,6 +357,48 @@ namespace TrafficSimulator
                 }
 
             }
+
+            foreach (Human human in humans)
+            {
+                int diss = distance(human.position, human.nextJunction);
+                /*if (diss < 200)
+                {
+                    if (car.turn == 1)
+                        rightBlinker = Color.Red;
+                    else if (car.turn == -1)
+                        leftBlinker = Color.Red;
+                    else
+                    {
+                        leftBlinker = Color.Green;
+                        rightBlinker = Color.Green;
+                    }
+                }*/
+
+                //int blinkerSize = 5;
+                _spriteBatch.Draw(rect, new Rectangle(human.position.X - 10, human.position.Y - 10, human.Size.X, human.Size.Y), human.color);
+                /*if (car.speedVect.X < 0)
+                {
+                    _spriteBatch.Draw(rect, new Rectangle(human.position.X - 10, human.position.Y - 10);
+                    _spriteBatch.Draw(rect, new Rectangle(human.position.X - 10, human.position.Y - 10 + 15);
+
+                }
+                else if (car.speedVect.X > 0)
+                {
+                    _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10 + car.Size.X - blinkerSize, car.position.Y - 10 + car.Size.Y - blinkerSize, blinkerSize, blinkerSize), rightBlinker);
+                    _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10 + car.Size.X - blinkerSize, car.position.Y - 10 + car.Size.Y - blinkerSize - 15, blinkerSize, blinkerSize), leftBlinker);
+                }
+                if (car.speedVect.Y < 0)
+                {
+                    _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10, car.position.Y - 10, blinkerSize, blinkerSize), leftBlinker);
+                    _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10 + 15, car.position.Y - 10, blinkerSize, blinkerSize), rightBlinker);
+                }
+                else if (car.speedVect.Y > 0)
+                {
+                    _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10 + car.Size.X - blinkerSize, car.position.Y - 10 + car.Size.Y - blinkerSize, blinkerSize, blinkerSize), leftBlinker);
+                    _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10 + car.Size.X - blinkerSize - 15, car.position.Y - 10 + car.Size.Y - blinkerSize, blinkerSize, blinkerSize), rightBlinker);
+                }*/
+
+            }
             //foreach (Car car in cars)
             //{
             //    _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10, car.position.Y - 10, car.Size.X, car.Size.Y), car.color);
@@ -325,6 +416,10 @@ namespace TrafficSimulator
                 foreach (Car car in cars)
                 {
                     _spriteBatch.Draw(rect, new Rectangle(car.destination.X - 5, car.destination.Y - 5, 10, 10), car.color);
+                }
+                foreach (Human human in humans)
+                {
+                    _spriteBatch.Draw(rect, new Rectangle(human.destination.X - 5, human.destination.Y - 5, 10, 10), human.color);
                 }
             }
             _spriteBatch.End();
@@ -399,6 +494,40 @@ namespace TrafficSimulator
             }
         }
 
+        private void createSidewalkStructure()
+        {
+            foreach (Line line in sidewalkLineList)
+            {
+                if (!sidewalkStructure.ContainsKey(line.start))
+                {
+                    sidewalkStructure.Add(line.start, new List<Point>());
+                }
+                sidewalkStructure[line.start].Add(line.end);
+            }
+
+            foreach (Line line in sidewalkLineList)
+            {
+                if (!sidewalkStructure.ContainsKey(line.end)) endPointsHumans.Add(line.end);
+                Boolean DupFound = false;
+                foreach (var sidewalk in sidewalkStructure)
+                {
+                    if (sidewalk.Value.Contains(line.start))
+                    {
+                        DupFound = true;
+                        break;
+                    }
+                }
+                if (!DupFound) startingPointsHumans.Add(line.start);
+            }
+            if (!Debugger.IsAttached)
+            {
+                Console.WriteLine("Starting Points:");
+                Console.WriteLine(startingPointsHumans.Count);
+                foreach (Point start in startingPointsHumans) Console.WriteLine(start.ToString());
+                Console.WriteLine("End");
+            }
+        }
+
         private void printRoadStructure()
         {
             foreach (var point in roadStructure)
@@ -408,6 +537,21 @@ namespace TrafficSimulator
                 foreach (Point endPoint in list)
                 {
                     Console.WriteLine("--" + endPoint);
+                }
+                Console.WriteLine();
+            }
+        }
+
+        private void printSidewalkStructure()
+        {
+            Console.WriteLine("\n---------------------------------------------------------------\n");
+            foreach (var point in sidewalkStructure)
+            {
+                Console.WriteLine(point.Key);
+                List<Point> list = point.Value;
+                foreach (Point endPointHumans in list)
+                {
+                    Console.WriteLine("--" + endPointHumans);
                 }
                 Console.WriteLine();
             }
@@ -620,6 +764,78 @@ namespace TrafficSimulator
                     if (point == destination)
                         return (points, path.Item2 + length);
                     (List<Point>, int) foundPath = checkPath((points, path.Item2 + length), destination, depth - 1, shortestPath);
+                    if (foundPath.Item2 > 0)
+                    {
+                        if (foundPath.Item2 < shortestPath)
+                        {
+                            shortestPath = foundPath.Item2;
+                            result = foundPath;
+                        }
+                    }
+                }
+                return result;
+            }
+            catch
+            {
+                return (path.Item1, 0);
+            }
+
+
+        }
+
+        Dictionary<Point, Dictionary<Point, List<Point>>> possiblePathsHumans;
+        const int bruteDepthHumans = 25;
+        private void createPossiblePathsHumans()
+        {
+            possiblePathsHumans = new Dictionary<Point, Dictionary<Point, List<Point>>>();
+            Thread[] threadsHumans = new Thread[startingPointsHumans.Count];
+            int j = 0;
+            foreach (Point start in startingPointsHumans)
+            {
+                threadsHumans[j] = new Thread(() =>
+                {
+                    foreach (Point end in endPointsHumans)
+                    {
+                        List<Point> path = new List<Point>();
+                        path.Add(start);
+                        (List<Point>, int) foundPath = checkPathHumans((path, 0), end, bruteDepthHumans, int.MaxValue);
+                        if (!possiblePathsHumans.ContainsKey(start))
+                        {
+                            possiblePathsHumans.Add(start, new Dictionary<Point, List<Point>>());
+                        }
+                        possiblePathsHumans[start].Add(end, foundPath.Item1);
+                    }
+                });
+                j++;
+            }
+            foreach (Thread threadHumans in threadsHumans) threadHumans.Start();
+            foreach (Thread threadHumans in threadsHumans)
+            {
+                threadHumans.Join();
+                Console.WriteLine("Thread joined");
+            }
+            Console.WriteLine(iterHumans);
+        }
+        public int iterHumans = 0;
+        private (List<Point>, int) checkPathHumans((List<Point>, int) path, Point destination, int depth, int bestLength)
+        {
+            iterHumans++;
+            if (depth == 0 /*|| path.Item2 > bestLength*/)
+            {
+                return (path.Item1, 0);
+            }
+            int shortestPath = bestLength;
+            (List<Point>, int) result = (path.Item1, 0);
+            try
+            {
+                foreach (Point point in sidewalkStructure[path.Item1.Last()])
+                {
+                    List<Point> points = new List<Point>(path.Item1);
+                    int length = path.Item2 + Math.Abs(point.X - path.Item1.Last().X + point.Y - path.Item1.Last().Y);
+                    points.Add(point);
+                    if (point == destination)
+                        return (points, path.Item2 + length);
+                    (List<Point>, int) foundPath = checkPathHumans((points, path.Item2 + length), destination, depth - 1, shortestPath);
                     if (foundPath.Item2 > 0)
                     {
                         if (foundPath.Item2 < shortestPath)
