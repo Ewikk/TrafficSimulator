@@ -16,6 +16,8 @@ using System.Threading.Tasks;
 using System.Collections;
 using SharpDX.MediaFoundation;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.Rebar;
+using SharpDX.Direct3D9;
+using System.Drawing.Drawing2D;
 //using System.Drawing;
 
 
@@ -84,7 +86,8 @@ namespace TrafficSimulator
         private List<Point> roadEndPoints = new List<Point>();
         private List<Point> sidewalkStartingPoints = new List<Point>();
         private List<Point> sidewalkEndPoints = new List<Point>();
-        private List<Rectangle> pedCrossings = new List<Rectangle>();
+        private List<Rectangle> pedCrossingsLights = new List<Rectangle>();
+        private List<Rectangle> pedCrossingsNormal = new List<Rectangle>();
         private Dictionary<Point, List<Point>> sidewalkStructure = new Dictionary<Point, List<Point>>();
         private const string svgPath = "..\\..\\..\\final.svg";
         private const int scale = 7;
@@ -94,9 +97,11 @@ namespace TrafficSimulator
         const int sidewalkBruteDepth = 12;
         //NEW FEATURE TESTING
         private Dictionary<Point, TrafficLight>[] TrafficLightsZones;/* = new Dictionary<Point, TrafficLight>();*/
+        private Dictionary<Point, TrafficLight> pedestriansLights = new Dictionary<Point, TrafficLight>();
         private static readonly Color TrafficLightsArea1Color = new Color(0, 128, 0);
         private static readonly Color TrafficLightsArea2Color = new Color(255, 0, 0);
         private static readonly Color pedCrossingColor = new Color(0xFF, 0xAA, 0xAA);
+        private static readonly Color pedCrossingLightsColor = new Color(0xFF, 0x55, 0x55);
 
         public Game1()
         {
@@ -132,12 +137,12 @@ namespace TrafficSimulator
             sidewalkPaths = createPossiblePaths(sidewalkStructure, sidewalkStartingPoints, sidewalkEndPoints, sidewalkBruteDepth);
             setupCars();
             //setupPedestrians();
-            pedestrians = new PedestrianThread(100, sidewalkStartingPoints, sidewalkEndPoints, sidewalkPaths, sidewalkStructure);
+            pedestrians = new PedestrianThread(100, sidewalkStartingPoints, sidewalkEndPoints, sidewalkPaths, sidewalkStructure, pedestriansLights);
             pedestrianThread = new Thread(() => { pedestrians.Run(); });
             pedestrianThread.Start();
-            
 
-            
+
+
         }
 
         private Car[] cars;
@@ -265,7 +270,7 @@ namespace TrafficSimulator
                 if (timeSinceLastSwitch > interval)
                 {
                     timeSinceLastSwitch = 0;
-                    cooldown = 1;
+                    cooldown = 5;
                     foreach (var area in TrafficLightsZones)
                     {
                         if (area.First().Value.isOpen)
@@ -277,12 +282,18 @@ namespace TrafficSimulator
                         }
                         else toBeSwitched = area;
                     }
+                    foreach (var light in pedestriansLights) light.Value.switchLight();
                 }
             }
             else
             {
                 cooldown -= gameTime.ElapsedGameTime.TotalSeconds;
-                if (cooldown <= 0)
+                if (cooldown <= 0 && pedestriansLights.Values.First().isOpen)
+                {
+                    cooldown = 1;
+                    foreach (var light in pedestriansLights) light.Value.switchLight();
+                }
+                else if (cooldown <= 0)
                 {
                     cooldown = 0;
                     foreach (var light in toBeSwitched)
@@ -394,9 +405,9 @@ namespace TrafficSimulator
 
             _pedestrianBatch.Begin();
             int pedestrianSize = 10;
-            foreach(Pedestrian pedestrian in pedestrians.pedestrians)
+            foreach (Pedestrian pedestrian in pedestrians.pedestrians)
             {
-                _pedestrianBatch.Draw(circle, new Rectangle(pedestrian.position.X - pedestrianSize/2, pedestrian.position.Y - pedestrianSize / 2, pedestrianSize, pedestrianSize), pedestrian.color);
+                _pedestrianBatch.Draw(circle, new Rectangle(pedestrian.position.X - pedestrianSize / 2, pedestrian.position.Y - pedestrianSize / 2, pedestrianSize, pedestrianSize), pedestrian.color);
             }
             _pedestrianBatch.End();
             _testingBatch.Begin();
@@ -429,12 +440,19 @@ namespace TrafficSimulator
         private void DrawSidewalks()
         {
             _sidewalksBatch.Begin();
-          
-            foreach(Rectangle coords in pedCrossings)
-                _sidewalksBatch.Draw(rect, coords, pedCrossingColor);
+
+            foreach (Rectangle coords in pedCrossingsLights)
+            {
+                if(pedestriansLights.Values.First().isOpen)
+                    _sidewalksBatch.Draw(rect, coords, Color.LightGreen);
+                else
+                    _sidewalksBatch.Draw(rect, coords, pedCrossingColor);
+            }
+            foreach(Rectangle coords in pedCrossingsNormal) _sidewalksBatch.Draw(rect, coords, Color.LightGreen);
             foreach (Rectangle coords in sidewalkList)
             {
-                if (pedCrossings.Contains(coords)) continue;
+                if (pedCrossingsNormal.Contains(coords)) continue;
+                if (pedCrossingsLights.Contains(coords)) continue;
                 _sidewalksBatch.Draw(rect, coords, Color.Gray);
             }
             _sidewalksBatch.End();
@@ -474,7 +492,7 @@ namespace TrafficSimulator
         //    }
         //}
 
-        private void createMovementStructure(List<Line> lineList,Dictionary<Point, List<Point>> structure, List<Point> startingPoints, List<Point> endPoints)
+        private void createMovementStructure(List<Line> lineList, Dictionary<Point, List<Point>> structure, List<Point> startingPoints, List<Point> endPoints)
         {
             foreach (Line line in lineList)
             {
@@ -606,7 +624,7 @@ namespace TrafficSimulator
                         boundaryPoints.Add(endP);
                     }
                     addRoad(startP, endP, brushWidth, brushColor);
-                    if (brushColor == TrafficLightsArea1Color || brushColor == TrafficLightsArea2Color)
+                    if (brushColor == TrafficLightsArea1Color || brushColor == TrafficLightsArea2Color || brushColor == pedCrossingLightsColor)
                     {
                         int xDiff = (int)(endX - startX) / 2;
                         int yDiff = (int)(endY - startY) / 2;
@@ -614,15 +632,17 @@ namespace TrafficSimulator
                         int yCenter = (int)startY + yDiff;
                         if (brushColor == TrafficLightsArea1Color)
                             TrafficLightsZones[0].Add(startP, new TrafficLight(startP, endP, new Point(xCenter, yCenter)));
-                        else if(brushColor == TrafficLightsArea2Color)
+                        else if (brushColor == TrafficLightsArea2Color)
                         {
                             TrafficLightsZones[1].Add(startP, new TrafficLight(startP, endP, new Point(xCenter, yCenter)));
                             TrafficLightsZones[1][startP].switchLight();
                         }
-                        //else
-                        //{
-                        //    pedCrossings.Add(new Line((int)startX, (int)startY, (int)endX, (int)endY));
-                        //}
+                        else
+                        {
+                            //pedCrossings.Add(new Line((int)startX, (int)startY, (int)endX, (int)endY));
+                            pedestriansLights.Add(startP, new TrafficLight(startP, endP, new Point(xCenter, yCenter)));
+                            pedestriansLights[startP].switchLight();
+                        }
                     }
                 }
                 else
@@ -673,16 +693,14 @@ namespace TrafficSimulator
                 sidewalkList.Add(coords);
                 sidewalkLineList.Add(new Line((int)start.X, (int)start.Y, (int)end.X, (int)end.Y));
             }
-            if (color == pedCrossingColor)
-            {
-                pedCrossings.Add(coords);
-            }
+            if (color == pedCrossingColor) pedCrossingsNormal.Add(coords);
+            else if (color == pedCrossingLightsColor) pedCrossingsLights.Add(coords);
         }
 
 
 
 
-        
+
 
         //BRUTE FORCE
         //TO DO

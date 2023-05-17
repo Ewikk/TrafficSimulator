@@ -21,11 +21,14 @@ namespace TrafficSimulator
         private Dictionary<Point, Dictionary<Point, List<Point>>> sidewalkPaths;
         private Stopwatch stopwatch = new Stopwatch();
         private Vector2 Size = new Vector2(10, 10);
-        public PedestrianThread(int count, List<Point> startingPoints, List<Point> endPoints, Dictionary<Point, Dictionary<Point, List<Point>>> paths, Dictionary<Point, List<Point>> sidewalkStructure) {
+        private Dictionary<Point, TrafficLight> trafficLights;
+        public PedestrianThread(int count, List<Point> startingPoints, List<Point> endPoints, Dictionary<Point, Dictionary<Point, List<Point>>> paths, Dictionary<Point, List<Point>> sidewalkStructure, Dictionary<Point, TrafficLight> trafficLights)
+        {
             pedestrianCount = count;
             this.startingPoints = startingPoints;
             this.endPoints = endPoints;
             this.sidewalkStructure = sidewalkStructure;
+            this.trafficLights = trafficLights;
             sidewalkPaths = paths;
             pedestrians = new Pedestrian[pedestrianCount];
             SetupPedestrians();
@@ -70,6 +73,7 @@ namespace TrafficSimulator
                     for (int i = 0; i < pedestrianCount; i++)
                     {
                         //if (CollisionDetected(pedestrians[i], 10)) continue;
+                        if (!isLightGreen(pedestrians[i], 5)) continue;
                         int prevPosX = pedestrians[i].position.X;
                         int prevPosY = pedestrians[i].position.Y;
                         pedestrians[i].position.X += (int)(pedestrians[i].speedVect.X * time);
@@ -115,6 +119,22 @@ namespace TrafficSimulator
             {
                 return;
             }
+        }
+
+        private bool isLightGreen(Pedestrian pedestrian,int distanceBetween)
+        {
+           
+                if (trafficLights.ContainsKey(pedestrian.nextJunction) && !trafficLights[pedestrian.nextJunction].isOpen && distance(pedestrian.nextJunction, pedestrian.position) < distanceBetween && distance(pedestrian.nextJunction, pedestrian.position) > distanceBetween / 2)
+                {
+                    return false;
+                }
+           
+            return true;
+        }
+
+        public int distance(Point p1, Point p2)
+        {
+            return Math.Abs((p1.X - p2.X) - (p1.Y - p2.Y));
         }
 
         private bool CollisionDetected(Pedestrian pedestrian, int distanceBetween)
