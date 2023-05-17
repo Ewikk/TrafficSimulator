@@ -261,7 +261,7 @@ namespace TrafficSimulator
                     if (this == car)
                         continue;
                     Point dis = distancePoint(this, position, car);
-                    if (dis.Y < Size.Y + Size.Y / 2 + 90 && dis.Y >= 0 && dis.X == 0)
+                    if (dis.Y < Size.Y + Size.Y / 2 + 80 && dis.Y >= 0 && dis.X == 0)
                         return true ;
                     //return beforeTram(distanceBetweenCars, trams);
                 }

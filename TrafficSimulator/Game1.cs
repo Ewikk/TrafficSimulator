@@ -154,7 +154,7 @@ namespace TrafficSimulator
             //>>>>>>> master
             //setupPedestrians();
             setupCars();
-            pedestrians = new PedestrianThread(100, sidewalkStartingPoints, sidewalkEndPoints, sidewalkPaths, sidewalkStructure, pedestriansLights);
+            pedestrians = new PedestrianThread(100, sidewalkStartingPoints, sidewalkEndPoints, sidewalkPaths, sidewalkStructure, pedestriansLights, trams);
             pedestrianThread = new Thread(() => { pedestrians.Run(); });
 
 

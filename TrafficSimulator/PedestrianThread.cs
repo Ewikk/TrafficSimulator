@@ -22,7 +22,8 @@ namespace TrafficSimulator
         private Stopwatch stopwatch = new Stopwatch();
         private Vector2 Size = new Vector2(10, 10);
         private Dictionary<Point, TrafficLight> trafficLights;
-        public PedestrianThread(int count, List<Point> startingPoints, List<Point> endPoints, Dictionary<Point, Dictionary<Point, List<Point>>> paths, Dictionary<Point, List<Point>> sidewalkStructure, Dictionary<Point, TrafficLight> trafficLights)
+        private Tram[] trams;
+        public PedestrianThread(int count, List<Point> startingPoints, List<Point> endPoints, Dictionary<Point, Dictionary<Point, List<Point>>> paths, Dictionary<Point, List<Point>> sidewalkStructure, Dictionary<Point, TrafficLight> trafficLights, Tram[] tram)
         {
             pedestrianCount = count;
             this.startingPoints = startingPoints;
@@ -31,6 +32,7 @@ namespace TrafficSimulator
             this.trafficLights = trafficLights;
             sidewalkPaths = paths;
             pedestrians = new Pedestrian[pedestrianCount];
+            trams = tram;
             SetupPedestrians();
         }
 
@@ -73,7 +75,7 @@ namespace TrafficSimulator
                     for (int i = 0; i < pedestrianCount; i++)
                     {
                         //if (CollisionDetected(pedestrians[i], 10)) continue;
-                        if (!isLightGreen(pedestrians[i], 5)) continue;
+                        if (!isMoveAllowed(pedestrians[i], 5, trams)) continue;
                         int prevPosX = pedestrians[i].position.X;
                         int prevPosY = pedestrians[i].position.Y;
                         pedestrians[i].position.X += (int)(pedestrians[i].speedVect.X * time);
@@ -121,6 +123,35 @@ namespace TrafficSimulator
             }
         }
 
+        private bool isMoveAllowed(Pedestrian pedestrian, int distanceBetween, Tram[] trams)
+        {
+            return isLightGreen(pedestrian, distanceBetween) && !beforeTram(pedestrian, distanceBetween, trams);
+        }
+        private bool beforeTram(Pedestrian pedastrian, int distanceBetweenCars, Tram[] trams)
+        {
+            foreach (Tram tram in trams)
+            {
+                double sp = 0;
+                int ownPos = 0;
+                int pos2 = 0;
+                //TO simplify
+                if (pedastrian.speedVect.Y != 0 && Math.Abs(tram.position.X - pedastrian.position.X) < tram.Size.X / 2 + this.Size.X / 2)
+                {
+                    sp = pedastrian.speedVect.Y;
+                    ownPos = pedastrian.position.Y;
+                    pos2 = tram.position.Y;
+
+                    if (sp > 0 && pos2 - ownPos < tram.Size.Y / 2 + this.Size.Y / 2 + distanceBetweenCars && pos2 - ownPos > 0 ||
+                       sp < 0 && ownPos - pos2 < tram.Size.Y / 2 + this.Size.Y / 2 + distanceBetweenCars && ownPos - pos2 > 0)
+                    {
+                        return true;
+                    }
+                }
+
+            }
+            return false;
+
+        }
         private bool isLightGreen(Pedestrian pedestrian,int distanceBetween)
         {
            

@@ -97,7 +97,7 @@ namespace TrafficSimulator
                         else
                             newDestination = nextDest1[i + 1];
 
-                        if(i == 2)
+                        if(i == 2 || i == 1)
                         {
                             isGoing = false;
                         }
@@ -121,7 +121,7 @@ namespace TrafficSimulator
                         else
                             newDestination = nextDest2[i + 1];
 
-                        if (i == 2)
+                        if (i == 2 || i == 1)
                         {
                             isGoing = false;
                         }
