@@ -24,15 +24,17 @@
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="mm"
      showgrid="false"
-     inkscape:zoom="5.6568543"
-     inkscape:cx="427.7996"
-     inkscape:cy="120.73848"
+     inkscape:zoom="2"
+     inkscape:cx="315.75"
+     inkscape:cy="227"
      inkscape:window-width="1920"
-     inkscape:window-height="1027"
-     inkscape:window-x="1272"
+     inkscape:window-height="1017"
+     inkscape:window-x="1912"
      inkscape:window-y="-8"
      inkscape:window-maximized="1"
-     inkscape:current-layer="layer5" />
+
+     inkscape:current-layer="layer2" />
+
   <defs
      id="defs45328" />
   <g
@@ -1101,5 +1103,20 @@
        style="fill:none;stroke:#4d4d4d;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-dasharray:none"
        d="M 178.60012,14.532 H 180.57"
        id="path10124" />
+  </g>
+  <g
+     inkscape:groupmode="layer"
+     id="layer2"
+     inkscape:label="Warstwa 3">
+    <path
+       style="fill:none;stroke:#000000;stroke-width:3;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-dasharray:none"
+       d="M 15,58 H 155"
+       id="path608"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:3;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-dasharray:none"
+       d="M 155,65 H 15"
+       id="path632"
+       sodipodi:nodetypes="cc" />
   </g>
 </svg>

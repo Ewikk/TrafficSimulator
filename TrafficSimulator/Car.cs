@@ -19,7 +19,7 @@ namespace TrafficSimulator
     {
         public int turn;
         public Point position;
-        public float speed = 300; //default speed
+        public float speed = 200; //default speed
         public Vector2 speedVect;
         public Point destination;
         public Point nextJunction;
@@ -91,10 +91,11 @@ namespace TrafficSimulator
         }
 
 
-        public void Move(Dictionary<Point, List<Point>> roadStructure, List<Point> startingPoints, List<Point> endPoints, Dictionary<Point, TrafficLight>[] trafficLights)
+        public void Move(Dictionary<Point, List<Point>> roadStructure, List<Point> startingPoints, List<Point> endPoints, Dictionary<Point, TrafficLight>[] trafficLights, Tram[] tram)
         {
             try
             {
+                //Console.WriteLine(tram[0].position.ToString());
                 while (true)
                 {
                     stopwatch.Stop();
@@ -110,7 +111,7 @@ namespace TrafficSimulator
                     }
                     stopwatch.Restart();
                     stopwatch.Start();
-                    if (!IsMoveAllowed(trafficLights, roadStructure))
+                    if (!IsMoveAllowed(trafficLights, roadStructure, tram))
                     {
                         Thread.Sleep(50);
                         continue;
@@ -195,10 +196,10 @@ namespace TrafficSimulator
                 return;
             }
         }
-
-        //POPIERDOLI MNIE OD TYCH POLSKICH NAZW,
+//POPIERDOLI MNIE OD TYCH POLSKICH NAZW,
         //CO TY MADAJCZAK JESTES?
-        private bool IsMoveAllowed(Dictionary<Point, TrafficLight>[] trafficLights, Dictionary<Point, List<Point>> roadStructure)
+        private bool IsMoveAllowed(Dictionary<Point, TrafficLight>[] trafficLights, Dictionary<Point, List<Point>> roadStructure, Tram[] trams)
+        
         {
             List<Point> rownorzedne = new List<Point>();
             rownorzedne.Add(new Point(1289, 617));
@@ -218,7 +219,7 @@ namespace TrafficSimulator
             }
             else
             {
-                return !CarCollisionDetected(distanceBetweenCars) && isLightGreen(trafficLights, 40);
+                return !CarCollisionDetected(distanceBetweenCars) && isLightGreen(trafficLights, distanceBetweenCars) && !ClosetoTram(distanceBetweenCars, trams);
             }
         }
 
@@ -232,6 +233,65 @@ namespace TrafficSimulator
                 }
             }
             return true;
+        }
+
+        private bool ClosetoTram(int distanceBetweenCars, Tram[] trams )
+        {
+            int lowerTracksY = 455;
+            int upperTracksY = 406;
+
+            if (speedVect.Y < 0 && position.Y + distanceBetweenCars > lowerTracksY + Size.Y / 2 && position.Y < lowerTracksY + Size.Y / 2 + distanceBetweenCars)
+            {
+                foreach (Car car in cars)
+                {
+                    if (this == car)
+                        continue;
+                    Point dis = distancePoint(this, position, car);
+                    if (dis.Y < Size.Y + Size.Y / 2 + 90 && dis.Y >= 0 && dis.X == 0)
+                        return true ;
+                    //return beforeTram(distanceBetweenCars, trams);
+                }
+            }
+            else if (speedVect.Y > 0 && position.Y < upperTracksY - Size.Y / 2 + 35 + distanceBetweenCars && position.Y + 35 + distanceBetweenCars > upperTracksY - Size.Y / 2)
+            {
+                foreach (Car car in cars)
+                {
+                    if (this == car)
+                        continue;
+                    Point dis = distancePoint(this, position, car);
+                    if (dis.Y < Size.Y + Size.Y / 2 + 90 + 35 + distanceBetweenCars && dis.Y >= 0 && dis.X == 0)
+                        return true;
+                    //return beforeTram(distanceBetweenCars, trams);
+                }
+                 
+            }
+            return beforeTram(distanceBetweenCars, trams);
+        }
+
+        private bool beforeTram(int distanceBetweenCars, Tram[] trams)
+        {
+            foreach (Tram tram in trams)
+            {
+                double sp = 0;
+                int ownPos = 0;
+                int pos2 = 0;
+                //TO simplify
+                if (speedVect.Y != 0 && Math.Abs(tram.position.X - position.X) < tram.Size.X / 2 + this.Size.X / 2)
+                {
+                    sp = speedVect.Y;
+                    ownPos = position.Y;
+                    pos2 = tram.position.Y;
+
+                    if (sp > 0 && pos2 - ownPos < tram.Size.Y / 2 + this.Size.Y / 2 + distanceBetweenCars && pos2 - ownPos > 0 ||
+                       sp < 0 && ownPos - pos2 < tram.Size.Y / 2 + this.Size.Y / 2 + distanceBetweenCars && ownPos - pos2 > 0)
+                    {
+                        return true;
+                    }
+                }
+
+            }
+            return false;
+
         }
 
         private bool rightHand(Dictionary<Point, List<Point>> roadStructure, int distanceBetweenCars)
