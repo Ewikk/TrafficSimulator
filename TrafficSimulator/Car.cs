@@ -273,7 +273,7 @@ namespace TrafficSimulator
                     if (this == car)
                         continue;
                     Point dis = distancePoint(this, position, car);
-                    if (dis.Y < Size.Y + Size.Y / 2 + 90 + 35 + distanceBetweenCars && dis.Y >= 0 && dis.X == 0)
+                    if (dis.Y < Size.Y + Size.Y / 2 + 90 + distanceBetweenCars && dis.Y >= 0 && dis.X == 0)
                         return true;
                     //return beforeTram(distanceBetweenCars, trams);
                 }
@@ -398,7 +398,7 @@ namespace TrafficSimulator
                                 this.position.Y - this.Size.Y / 2 < car.position.Y + car.Size.Y / 2 &&
                                 this.position.Y - this.Size.Y / 2 > car.position.Y - car.Size.Y / 2))
                     {
-                        Console.WriteLine("kraksa");
+                        //Console.WriteLine("kraksa");
                         //collison = false;
                     }
                     return collison;

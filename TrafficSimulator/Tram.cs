@@ -28,7 +28,10 @@ namespace TrafficSimulator
         public Point Size;
         public Color color = Color.Blue;
         private Stopwatch stopwatch = new Stopwatch();
+        private List<Point> nextDest1;
+        private List<Point> nextDest2;
         public Tram[] siema;
+        private bool isGoing = true;
 
         public Tram(int xPos, int yPos, float xSpeed, float ySpeed)
         {
@@ -39,90 +42,137 @@ namespace TrafficSimulator
             ySpeed = Math.Abs(ySpeed);
             speed = Math.Max(xSpeed, ySpeed);
             posCopy = position;
+            speedVectCopy = speedVect;
+            Size.X = 100;
+            Size.Y = 30;
+            nextDest1 = new List<Point>();
+            nextDest2 = new List<Point>();
+            init();
+            Console.WriteLine("Siema");
             destination = setDestination(position);
             destCopy = destination;
-            speedVectCopy = speedVect;
-            Size.X = 80;
-            Size.Y = 30;
-            init();
         }
         private void init()
         {
             outOfMap = false;
             stopwatch.Start();
+
+            Point a4 = new Point(0, 406);
+            Point a3 = new Point(105, 406);
+            Point a2 = new Point(1085, 406);
+            Point a1 = new Point(1470, 406);
+
+            nextDest1.Add(a1);
+            nextDest1.Add(a2);
+            nextDest1.Add(a3);
+            nextDest1.Add(a4);
+
+            Point b1 = new Point(0, 455);
+            Point b2 = new Point(105, 455);
+            Point b3 = new Point(1085, 455);
+            Point b4 = new Point(1470, 455);
+
+            nextDest2.Add(b1);
+            nextDest2.Add(b2);
+            nextDest2.Add(b3);
+            nextDest2.Add(b4);
         }
 
         public Point setDestination(Point cos)
         {
-            Point a1 = new Point(1085, 406);
-            Point b1 = new Point(105, 455);
-            Point b2 = new Point(1085, 455);
-            Point a2 = new Point(105, 406);
-
             Point newDestination = new Point(0, 0);
-            if (cos == a1)
-                newDestination = a2;
-            else if (cos == a2)
-                newDestination = a1;
-            else if (cos == b1)
-                newDestination = b2;
-            else if (cos == b2)
-                newDestination = b1;
+            if (nextDest1.Contains(cos))
+            {
+                int i = 0;
+                foreach (Point p in nextDest1)
+                {
+                    if (p == cos)
+                    {
+                        if (i == 3)
+                        {
+                            newDestination = destCopy;
+                            position = posCopy;
+                            //destination = destCopy;
+                        }
+                        else
+                            newDestination = nextDest1[i + 1];
+
+                        if(i == 2)
+                        {
+                            isGoing = false;
+                        }
+                    }
+                    i++;
+                }
+            }
+            else if (nextDest2.Contains(cos))
+            {
+                int i = 0;
+                foreach (Point p in nextDest2)
+                {
+                    if (p == cos)
+                    {
+                        if (i == 3)
+                        {
+                            newDestination = destCopy;
+                            position = posCopy;
+                            //destination = destCopy;
+                        }
+                        else
+                            newDestination = nextDest2[i + 1];
+
+                        if (i == 2)
+                        {
+                            isGoing = false;
+                        }
+                    }
+                    i++;
+                }
+            }
             return newDestination;
         }
 
         public void Move()
         {
-            try
+            while (true)
             {
-                while (true)
+
+                if(!isGoing)
                 {
-                    stopwatch.Stop();
-                    TimeSpan timeSpan = stopwatch.Elapsed;
-                    double time;
-                    if (Debugger.IsAttached)
-                    {
-                        time = 0.05;
-                    }
-                    else
-                    {
-                        time = timeSpan.TotalSeconds;
-                    }
-                    stopwatch.Restart();
-                    stopwatch.Start();
-                    int prevPosX = position.X;
-                    int prevPosY = position.Y;
+                    int sleepms = 3000;
+                    Thread.Sleep(sleepms);
+                    isGoing = true;
+                    position.X -= (int)(speedVect.X) * sleepms / 1000;
+                }
+
+                stopwatch.Stop();
+                TimeSpan timeSpan = stopwatch.Elapsed;
+                double time;
+                if (Debugger.IsAttached)
+                {
+                    time = 0.05;
+                }
+                else
+                {
+                    time = timeSpan.TotalSeconds;
+                }
+                stopwatch.Restart();
+                stopwatch.Start();
+                int prevPosX = position.X;
+                int prevPosY = position.Y;
+                if (isGoing)
+                {
                     position.X += (int)(speedVect.X * time);
                     position.Y += (int)(speedVect.Y * time);
-
-                    if (Math.Sign(prevPosX - destination.X) != Math.Sign(position.X - destination.X))
-                    {
-                        position = destination;
-                        destination = setDestination(destination);
-                        speedVect.X = -speedVect.X;
-
-                        /*                       if (position.X != destination.X)
-                                               {
-                                                   speedVect.X = Math.Sign(destination.X - position.X) * speed;
-                                                   position.X += Math.Sign(destination.X - position.X) * distance;
-                                                   speedVect.Y = 0;
-                                               }
-                                               else
-                                               {
-                                                   speedVect.X = 0;
-                                                   speedVect.Y = Math.Sign(destination.Y - position.Y) * speed;
-                                                   position.Y += Math.Sign(destination.Y - position.Y) * distance;
-                                               }*/
-                        /*                        position = posCopy;
-                                                destination = posCopy;*/
-                        //speedVect = -speedVectCopy;
-                    }
-                    Thread.Sleep(15);
                 }
-            }
-            catch (ThreadInterruptedException)
-            {
-                return;
+
+                if (Math.Sign(prevPosX - destination.X) != Math.Sign(position.X - destination.X))
+                {
+                    position = destination;
+                    destination = setDestination(destination);
+
+                }
+                Thread.Sleep(15);
             }
         }
 
