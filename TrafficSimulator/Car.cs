@@ -24,6 +24,7 @@ namespace TrafficSimulator
         public Point destination;
         public Point nextJunction;
         public bool outOfMap;
+        //WHY THE FUCK IS SIZE A POINT?
         public Point Size;
         public Color color = Color.Blue;
         private Stopwatch stopwatch = new Stopwatch();
@@ -195,8 +196,10 @@ namespace TrafficSimulator
                 return;
             }
         }
-
+//POPIERDOLI MNIE OD TYCH POLSKICH NAZW,
+        //CO TY MADAJCZAK JESTES?
         private bool IsMoveAllowed(Dictionary<Point, TrafficLight>[] trafficLights, Dictionary<Point, List<Point>> roadStructure, Tram[] trams)
+        
         {
             List<Point> rownorzedne = new List<Point>();
             rownorzedne.Add(new Point(1289, 617));
@@ -367,6 +370,8 @@ namespace TrafficSimulator
                     }
                 }
 
+
+                //WOW SLOW DOWN COWBOY
                 if (collison)
                 {
                     if ((this.position.X + this.Size.X / 2 < car.position.X + car.Size.X / 2 &&
