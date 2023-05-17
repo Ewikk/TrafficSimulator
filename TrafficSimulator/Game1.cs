@@ -119,8 +119,8 @@ namespace TrafficSimulator
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
             _graphics.PreferredBackBufferWidth = 1470;
-            //_graphics.PreferredBackBufferHeight = 750;
-            _graphics.PreferredBackBufferHeight = 1600 * 9 / 16;
+            _graphics.PreferredBackBufferHeight = 832;
+            //_graphics.PreferredBackBufferHeight = 1600 * 9 / 16;
             //_graphics.IsFullScreen = true;
             _graphics.ApplyChanges();
         }
@@ -471,14 +471,14 @@ namespace TrafficSimulator
                 {
                     _spriteBatch.Draw(rect, new Rectangle(start.X - 5, start.Y - 5, 10, 10), Color.Green);
                 }
-                foreach (Point start in sidewalkStartingPoints)
-                {
-                    _spriteBatch.Draw(rect, new Rectangle(start.X - 5, start.Y - 5, 10, 10), Color.Green);
-                }
-                foreach (Point end in sidewalkEndPoints)
-                {
-                    _spriteBatch.Draw(rect, new Rectangle(end.X - 5, end.Y - 5, 10, 10), Color.Red);
-                }
+                //foreach (Point start in sidewalkStartingPoints)
+                //{
+                //    _spriteBatch.Draw(rect, new Rectangle(start.X - 5, start.Y - 5, 10, 10), Color.Green);
+                //}
+                //foreach (Point end in sidewalkEndPoints)
+                //{
+                //    _spriteBatch.Draw(rect, new Rectangle(end.X - 5, end.Y - 5, 10, 10), Color.Red);
+                //}
                 //foreach (Point start in roadEndPoints)
                 //{
                 //    _spriteBatch.Draw(rect, new Rectangle(start.X - 5, start.Y - 5, 10, 10), Color.Red);

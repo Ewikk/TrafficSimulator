@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Diagnostics.Eventing.Reader;
 using System.DirectoryServices.ActiveDirectory;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -134,46 +135,49 @@ namespace TrafficSimulator
 
         public void Move()
         {
-            while (true)
+            try
             {
+                while (true)
+                {
 
-                if(!isGoing)
-                {
-                    int sleepms = 3000;
-                    Thread.Sleep(sleepms);
-                    isGoing = true;
-                    position.X -= (int)(speedVect.X) * sleepms / 1000;
-                }
+                    if (!isGoing)
+                    {
+                        int sleepms = 3000;
+                        Thread.Sleep(sleepms);
+                        isGoing = true;
+                        position.X -= (int)(speedVect.X) * sleepms / 1000;
+                    }
 
-                stopwatch.Stop();
-                TimeSpan timeSpan = stopwatch.Elapsed;
-                double time;
-                if (Debugger.IsAttached)
-                {
-                    time = 0.05;
-                }
-                else
-                {
-                    time = timeSpan.TotalSeconds;
-                }
-                stopwatch.Restart();
-                stopwatch.Start();
-                int prevPosX = position.X;
-                int prevPosY = position.Y;
-                if (isGoing)
-                {
-                    position.X += (int)(speedVect.X * time);
-                    position.Y += (int)(speedVect.Y * time);
-                }
+                    stopwatch.Stop();
+                    TimeSpan timeSpan = stopwatch.Elapsed;
+                    double time;
+                    if (Debugger.IsAttached)
+                    {
+                        time = 0.05;
+                    }
+                    else
+                    {
+                        time = timeSpan.TotalSeconds;
+                    }
+                    stopwatch.Restart();
+                    stopwatch.Start();
+                    int prevPosX = position.X;
+                    int prevPosY = position.Y;
+                    if (isGoing)
+                    {
+                        position.X += (int)(speedVect.X * time);
+                        position.Y += (int)(speedVect.Y * time);
+                    }
 
-                if (Math.Sign(prevPosX - destination.X) != Math.Sign(position.X - destination.X))
-                {
-                    position = destination;
-                    destination = setDestination(destination);
+                    if (Math.Sign(prevPosX - destination.X) != Math.Sign(position.X - destination.X))
+                    {
+                        position = destination;
+                        destination = setDestination(destination);
 
+                    }
+                    Thread.Sleep(15);
                 }
-                Thread.Sleep(15);
-            }
+            } catch (ThreadInterruptedException) { return; };
         }
 
 
