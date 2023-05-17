@@ -11,7 +11,7 @@ using static System.Windows.Forms.VisualStyles.VisualStyleElement.Rebar;
 
 namespace TrafficSimulator
 {
-    class PedestrianThread
+    public class PedestrianThread
     {
         private int pedestrianCount = 0;
         public Pedestrian[] pedestrians = null;

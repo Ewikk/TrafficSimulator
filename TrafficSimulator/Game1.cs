@@ -151,12 +151,17 @@ namespace TrafficSimulator
 //=======
             roadPaths = createPossiblePaths(roadStructure, roadStartingPoints, roadEndPoints, roadBruteDepth);
             sidewalkPaths = createPossiblePaths(sidewalkStructure, sidewalkStartingPoints, sidewalkEndPoints, sidewalkBruteDepth);
-//>>>>>>> master
-            setupCars();
+            //>>>>>>> master
             //setupPedestrians();
+            setupCars();
             pedestrians = new PedestrianThread(100, sidewalkStartingPoints, sidewalkEndPoints, sidewalkPaths, sidewalkStructure, pedestriansLights);
             pedestrianThread = new Thread(() => { pedestrians.Run(); });
+
+
+
+            foreach(Thread thread in carThreads) thread.Start();
             pedestrianThread.Start();
+
 
 
 
@@ -206,8 +211,7 @@ namespace TrafficSimulator
                 {
                     //In general, the ThreadPool is optimized for short-lived, lightweight tasks that can be executed quickly, while the TaskScheduler is better suited for longer-running, more complex tasks Task was lagging
                     //Task.Factory.StartNew(() => car.Move(roadStructure));
-                    Thread thread = new Thread(() => { car.Move(roadStructure, roadStartingPoints, roadEndPoints, TrafficLightsZones, trams); });
-                    thread.Start();
+                    Thread thread = new Thread(() => { car.Move(roadStructure, roadStartingPoints, roadEndPoints, TrafficLightsZones, trams, pedestrians); });
                     carThreads.Add(thread);
                 }
             }

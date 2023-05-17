@@ -73,49 +73,56 @@ namespace TrafficSimulator
 
         public void Move()
         {
-            while (true)
+            try
             {
-                stopwatch.Stop();
-                TimeSpan timeSpan = stopwatch.Elapsed;
-                double time;
-                if (Debugger.IsAttached)
+                while (true)
                 {
-                    time = 0.05;
-                }
-                else
-                {
-                    time = timeSpan.TotalSeconds;
-                }
-                stopwatch.Restart();
-                stopwatch.Start();
-                int prevPosX = position.X;
-                int prevPosY = position.Y;
-                position.X += (int)(speedVect.X * time);
-                position.Y += (int)(speedVect.Y * time);
+                    stopwatch.Stop();
+                    TimeSpan timeSpan = stopwatch.Elapsed;
+                    double time;
+                    if (Debugger.IsAttached)
+                    {
+                        time = 0.05;
+                    }
+                    else
+                    {
+                        time = timeSpan.TotalSeconds;
+                    }
+                    stopwatch.Restart();
+                    stopwatch.Start();
+                    int prevPosX = position.X;
+                    int prevPosY = position.Y;
+                    position.X += (int)(speedVect.X * time);
+                    position.Y += (int)(speedVect.Y * time);
 
-                if (Math.Sign(prevPosX - destination.X) != Math.Sign(position.X - destination.X))
-                {
-                    position = destination;
-                    destination = setDestination(destination);
-                    speedVect.X = -speedVect.X;
+                    if (Math.Sign(prevPosX - destination.X) != Math.Sign(position.X - destination.X))
+                    {
+                        position = destination;
+                        destination = setDestination(destination);
+                        speedVect.X = -speedVect.X;
 
- /*                       if (position.X != destination.X)
-                        {
-                            speedVect.X = Math.Sign(destination.X - position.X) * speed;
-                            position.X += Math.Sign(destination.X - position.X) * distance;
-                            speedVect.Y = 0;
-                        }
-                        else
-                        {
-                            speedVect.X = 0;
-                            speedVect.Y = Math.Sign(destination.Y - position.Y) * speed;
-                            position.Y += Math.Sign(destination.Y - position.Y) * distance;
-                        }*/
-/*                        position = posCopy;
-                        destination = posCopy;*/
+                        /*                       if (position.X != destination.X)
+                                               {
+                                                   speedVect.X = Math.Sign(destination.X - position.X) * speed;
+                                                   position.X += Math.Sign(destination.X - position.X) * distance;
+                                                   speedVect.Y = 0;
+                                               }
+                                               else
+                                               {
+                                                   speedVect.X = 0;
+                                                   speedVect.Y = Math.Sign(destination.Y - position.Y) * speed;
+                                                   position.Y += Math.Sign(destination.Y - position.Y) * distance;
+                                               }*/
+                        /*                        position = posCopy;
+                                                destination = posCopy;*/
                         //speedVect = -speedVectCopy;
+                    }
+                    Thread.Sleep(15);
                 }
-                Thread.Sleep(15);
+            }
+            catch (ThreadInterruptedException)
+            {
+                return;
             }
         }
 

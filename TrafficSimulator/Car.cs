@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Diagnostics.Eventing.Reader;
 using System.DirectoryServices.ActiveDirectory;
 using System.Linq;
+using System.Net.Mime;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -91,7 +92,7 @@ namespace TrafficSimulator
         }
 
 
-        public void Move(Dictionary<Point, List<Point>> roadStructure, List<Point> startingPoints, List<Point> endPoints, Dictionary<Point, TrafficLight>[] trafficLights, Tram[] tram)
+        public void Move(Dictionary<Point, List<Point>> roadStructure, List<Point> startingPoints, List<Point> endPoints, Dictionary<Point, TrafficLight>[] trafficLights, Tram[] tram, PedestrianThread pedestrianManager)
         {
             try
             {
@@ -111,7 +112,7 @@ namespace TrafficSimulator
                     }
                     stopwatch.Restart();
                     stopwatch.Start();
-                    if (!IsMoveAllowed(trafficLights, roadStructure, tram))
+                    if (!IsMoveAllowed(trafficLights, roadStructure, tram, pedestrianManager))
                     {
                         Thread.Sleep(50);
                         continue;
@@ -198,7 +199,7 @@ namespace TrafficSimulator
         }
 //POPIERDOLI MNIE OD TYCH POLSKICH NAZW,
         //CO TY MADAJCZAK JESTES?
-        private bool IsMoveAllowed(Dictionary<Point, TrafficLight>[] trafficLights, Dictionary<Point, List<Point>> roadStructure, Tram[] trams)
+        private bool IsMoveAllowed(Dictionary<Point, TrafficLight>[] trafficLights, Dictionary<Point, List<Point>> roadStructure, Tram[] trams, PedestrianThread pedestrianManager)
         
         {
             List<Point> rownorzedne = new List<Point>();
@@ -215,7 +216,7 @@ namespace TrafficSimulator
             int distanceBetweenCars = (int)Math.Sqrt(speed * 1.5);
             if (rownorzedne.Contains(nextJunction))
             {
-                return !CarCollisionDetected(distanceBetweenCars) && !rightHand(roadStructure, 2 * distanceBetweenCars);
+                return !CarCollisionDetected(distanceBetweenCars) && !rightHand(roadStructure, 2 * distanceBetweenCars) && !isPedestrianAhead(pedestrianManager);
             }
             else
             {
@@ -233,6 +234,19 @@ namespace TrafficSimulator
                 }
             }
             return true;
+        }
+
+
+        //TO DO
+        private bool isPedestrianAhead(PedestrianThread pedestrianManager)
+        {
+            foreach(Pedestrian pedestrian in pedestrianManager.pedestrians)
+            {
+                if ((distance(position, pedestrian.position) < 55 && distance(position, pedestrian.position) > 10 && speedVect.X != 0 && Math.Sign(speedVect.X) == Math.Sign(pedestrian.position.X - position.X) && Math.Abs(pedestrian.position.Y - position.Y) < 20)
+                ||(distance(position, pedestrian.position) < 55 && distance(position, pedestrian.position) > 10 && speedVect.Y != 0 && Math.Sign(speedVect.Y) == Math.Sign(pedestrian.position.Y - position.Y) && Math.Abs(pedestrian.position.X - position.X) < 20))
+                    return true;
+            }
+            return false;
         }
 
         private bool ClosetoTram(int distanceBetweenCars, Tram[] trams )
