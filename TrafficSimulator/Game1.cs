@@ -70,17 +70,22 @@ namespace TrafficSimulator
         private SpriteBatch _spriteBatch;
         private SpriteBatch _roadsBatch;
         private SpriteBatch _sidewalksBatch;
+        private SpriteBatch _tramBatch;
         private SpriteBatch _testingBatch; // to be separated;
         private List<Rectangle> roadList = new List<Rectangle>();
         private List<Point> boundaryPoints = new List<Point>();
         private List<Rectangle> sidewalkList = new List<Rectangle>();
         private List<Line> roadLineList = new List<Line>();
         private List<Line> sidewalkLineList = new List<Line>();
+        private List<Rectangle> tramList = new List<Rectangle>();
+        private List<Line> tramLineList = new List<Line>();
         private Texture2D rect; //Texture used to draw rectangles
         private Texture2D circle; //Texture used to draw circles
         private Dictionary<Point, List<Point>> roadStructure = new Dictionary<Point, List<Point>>();
+        private Dictionary<Point, List<Point>> tramStructure = new Dictionary<Point, List<Point>>();   
         private List<Point> startingPoints = new List<Point>();
         private List<Point> endPoints = new List<Point>();
+        private List<Point> tramStartingPoints = new List<Point>();
         private Dictionary<Point, List<Point>> sidewalkStructure = new Dictionary<Point, List<Point>>();
         private const string svgPath = "..\\..\\..\\final.svg";
         private const int scale = 7;
@@ -121,6 +126,9 @@ namespace TrafficSimulator
             createRoadStructure();
             printRoadStructure();
             createPossiblePaths();
+            //tramStartingPoints.Add(new Point(1085, 406));
+            //tramStartingPoints.Add(new Point(105, 455));
+            setupTrams();
             setupCars();
 
             foreach (Car car in cars)
@@ -129,9 +137,21 @@ namespace TrafficSimulator
                 {
                     //In general, the ThreadPool is optimized for short-lived, lightweight tasks that can be executed quickly, while the TaskScheduler is better suited for longer-running, more complex tasks Task was lagging
                     //Task.Factory.StartNew(() => car.Move(roadStructure));
-                    Thread thread = new Thread(() => { car.Move(roadStructure, startingPoints, endPoints, TrafficLightsAreas); });
+                    Thread thread = new Thread(() => { car.Move(roadStructure, startingPoints, endPoints, TrafficLightsAreas, trams); });
                     thread.Start();
                     carThreads.Add(thread);
+                }
+            }
+            //tramStructure.Add(new Point(0, 0), new List<Point>());
+            foreach (Tram tram in trams)
+            {
+                if (tram != null)
+                {
+                    //In general, the ThreadPool is optimized for short-lived, lightweight tasks that can be executed quickly, while the TaskScheduler is better suited for longer-running, more complex tasks Task was lagging
+                    //Task.Factory.StartNew(() => car.Move(roadStructure));
+                    Thread thread = new Thread(() => { tram.Move(); });
+                    thread.Start();
+                    tramThreads.Add(thread);
                 }
             }
         }
@@ -162,11 +182,38 @@ namespace TrafficSimulator
 
         }
 
+        public Tram[] trams;
+        private List<Thread> tramThreads = new List<Thread>();
+        private void setupTrams()
+        {
+            trams = new Tram[2];
+            Random random = new Random();
+
+            /*            int i = 0;
+                        foreach (Point start in tramStartingPoints)
+                        {
+                            Random rand = new Random();
+                            trams[i] = new Tram(start.X, start.Y, 200,0);
+                            trams[i].color = new Color(random.Next(256), random.Next(256), random.Next(256), 255);
+                            i++;
+                            if (i == 2) break;
+                        }*/
+            Point a = new Point(1085, 406);
+            Point b = new Point(105, 455);
+            trams[0] = new Tram(a.X, a.Y, -200, 0);
+            trams[0].color = new Color(random.Next(256), random.Next(256), random.Next(256), 255);
+
+            trams[1] = new Tram(b.X, b.Y, 200, 0);
+            trams[1].color = new Color(random.Next(256), random.Next(256), random.Next(256), 255);
+
+        }
+
         protected override void LoadContent()
         {
             _spriteBatch = new SpriteBatch(GraphicsDevice);
             _roadsBatch = new SpriteBatch(GraphicsDevice);
             _sidewalksBatch = new SpriteBatch(GraphicsDevice);
+            _tramBatch = new SpriteBatch(GraphicsDevice);
             _testingBatch = new SpriteBatch(GraphicsDevice);
             rect = new Texture2D(_graphics.GraphicsDevice, 1, 1);
             rect.SetData(new[] { Color.White });
@@ -250,6 +297,10 @@ namespace TrafficSimulator
             {
                 thread.Interrupt();
             }
+            foreach (Thread thread in tramThreads)
+            {
+                thread.Interrupt();
+            }
             base.OnExiting(sender, args);
         }
 
@@ -264,6 +315,7 @@ namespace TrafficSimulator
             // TODO: Add your drawing code here
             DrawRoads();
             DrawSidewalks();
+            DrawTram();
             _spriteBatch.Begin();
             foreach (Car car in cars)
             {
@@ -308,6 +360,28 @@ namespace TrafficSimulator
                 }
 
             }
+
+            foreach (Tram tram in trams)
+            {
+                Color leftBlinker = Color.Orange;
+                Color rightBlinker = Color.Orange;
+                int blinkerSize = 5;
+                //Console.WriteLine(tram.position.ToString());
+                _spriteBatch.Draw(rect, new Rectangle(tram.position.X - 22, tram.position.Y - 22, tram.Size.X, tram.Size.Y), tram.color);
+                if (tram.speedVect.X < 0)
+                {
+                    _spriteBatch.Draw(rect, new Rectangle(tram.position.X - 22, tram.position.Y - 22, blinkerSize, blinkerSize), rightBlinker);
+                    _spriteBatch.Draw(rect, new Rectangle(tram.position.X - 22, tram.position.Y - 22 + 25, blinkerSize, blinkerSize), leftBlinker);
+
+                }
+                else if (tram.speedVect.X > 0)
+                {
+                    _spriteBatch.Draw(rect, new Rectangle(tram.position.X - 22 + tram.Size.X - blinkerSize, tram.position.Y - 22 + tram.Size.Y - blinkerSize, blinkerSize, blinkerSize), rightBlinker);
+                    _spriteBatch.Draw(rect, new Rectangle(tram.position.X - 22 + tram.Size.X - blinkerSize, tram.position.Y - 22 + tram.Size.Y - blinkerSize - 25, blinkerSize, blinkerSize), leftBlinker);
+                }
+
+            }
+
             //foreach (Car car in cars)
             //{
             //    _spriteBatch.Draw(rect, new Rectangle(car.position.X - 10, car.position.Y - 10, car.Size.X, car.Size.Y), car.color);
@@ -363,6 +437,24 @@ namespace TrafficSimulator
                 _sidewalksBatch.Draw(rect, coords, Color.Gray);
             }
             _sidewalksBatch.End();
+        }
+
+        private void DrawTram()
+        {
+            _tramBatch.Begin();
+            foreach (Rectangle coords in tramList)
+            {
+                int width = coords.Width;
+                int height = coords.Height/3;
+                int x = coords.X;
+                int y1 = coords.Y - height;
+                int y2 = coords.Y;
+                int y3 = coords.Y + height;
+                _tramBatch.Draw(rect, new Rectangle(x,y1,width,height), Color.Brown);
+                //_tramBatch.Draw(rect, new Rectangle(x, y2, width, height), Color.Blue);
+                _tramBatch.Draw(rect, new Rectangle(x, y3, width, height), Color.Brown);
+            }
+            _tramBatch.End();
         }
 
         private void createRoadStructure()
@@ -529,6 +621,7 @@ namespace TrafficSimulator
 
             ReadData(doc.SelectNodes("//svg:g[@id='layer1']/svg:path", nsMgr));
             ReadData(doc.SelectNodes("//svg:g[@id='layer5']/svg:path", nsMgr));
+            ReadData(doc.SelectNodes("//svg:g[@id='layer2']/svg:path", nsMgr));
         }
 
         private void addRoad(Point start, Point end, double brushWidth)
@@ -559,6 +652,11 @@ namespace TrafficSimulator
             {
                 sidewalkList.Add(coords);
                 sidewalkLineList.Add(new Line((int)start.X, (int)start.Y, (int)end.X, (int)end.Y));
+            }
+            else if (brushWidth == 21)
+            {
+                tramList.Add(coords);
+                tramLineList.Add(new Line((int)start.X, (int)start.Y, (int)end.X, (int)end.Y));
             }
         }
 
