@@ -219,7 +219,7 @@ namespace TrafficSimulator
             }
             else
             {
-                return !CarCollisionDetected(distanceBetweenCars) && isLightGreen(trafficLights, distanceBetweenCars) && !ClosetoTram(distanceBetweenCars, trams);
+                return !CarCollisionDetected(distanceBetweenCars) && isLightGreen(trafficLights, 40) && !ClosetoTram(distanceBetweenCars, trams);
             }
         }
 
