@@ -27,9 +27,8 @@ using Sprache;
 
 namespace CarProcess
 {
-    public class Car
+    public class CarProcess
     {
-        public Car() { }
 
         private UdpClient connectionServer = new UdpClient();
         private UdpClient dataServer = new UdpClient();

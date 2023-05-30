@@ -132,7 +132,7 @@ namespace TrafficSimulator
         }
         private byte[] bytes;
 
-        protected void SerializePaths(ref Dictionary<Point, Dictionary<Point, List<Point>>> paths, Dictionary<Point,
+        protected void CreateSerializePaths(ref Dictionary<Point, Dictionary<Point, List<Point>>> paths, Dictionary<Point,
             List<Point>> structure, List<Point> startingPoints,
             List<Point> endPoints, int bruteDepth, string filename)
         {
@@ -157,6 +157,18 @@ namespace TrafficSimulator
             }
             return paths;
         }
+
+        protected void CreateSerializeStructure(List<Line> lineList, Dictionary<Point, List<Point>> structure, List<Point> startingPoints, List<Point> endPoints, string filename)
+        {
+            createMovementStructure(lineList, structure, startingPoints, endPoints);
+            var serializer = new ConfigurationContainer().UseOptimizedNamespaces().Create();
+            string xml = serializer.Serialize(new XmlWriterSettings { Indent = true }, structure);
+            bytes = Encoding.ASCII.GetBytes(xml);
+            using (StreamWriter writer = new StreamWriter("../../../../" + filename + ".xml"))
+            {
+                writer.WriteLine(xml);
+            }
+        }
         protected override void Initialize()
         {
             // TODO: Add your initialization logic here
@@ -173,8 +185,10 @@ namespace TrafficSimulator
             {
                 Console.WriteLine(punkt.X + " " + punkt.Y);
             }
-            createMovementStructure(roadLineList, roadStructure, roadStartingPoints, roadEndPoints);
-            createMovementStructure(sidewalkLineList, sidewalkStructure, sidewalkStartingPoints, sidewalkEndPoints);
+            //createMovementStructure(roadLineList, roadStructure, roadStartingPoints, roadEndPoints);
+            CreateSerializeStructure(roadLineList, roadStructure, roadStartingPoints, roadEndPoints, "roadStructure");
+            CreateSerializeStructure(sidewalkLineList, sidewalkStructure, sidewalkStartingPoints, sidewalkEndPoints, "sidewalkStructure");
+            //createMovementStructure(sidewalkLineList, sidewalkStructure, sidewalkStartingPoints, sidewalkEndPoints);
             printRoadStructure();
             //<<<<<<< simea
             //createPossiblePaths();
@@ -195,8 +209,8 @@ namespace TrafficSimulator
 
             if (!Debugger.IsAttached)
             {
-                SerializePaths(ref roadPaths, roadStructure, roadStartingPoints, roadEndPoints, roadBruteDepth, "roadPaths");
-                SerializePaths(ref sidewalkPaths, sidewalkStructure, sidewalkStartingPoints, sidewalkEndPoints, sidewalkBruteDepth, "sidewalkPaths");
+                CreateSerializePaths(ref roadPaths, roadStructure, roadStartingPoints, roadEndPoints, roadBruteDepth, "roadPaths");
+                CreateSerializePaths(ref sidewalkPaths, sidewalkStructure, sidewalkStartingPoints, sidewalkEndPoints, sidewalkBruteDepth, "sidewalkPaths");
             }
             else
             {
@@ -947,9 +961,6 @@ namespace TrafficSimulator
 
         protected void ListenForClients()
         {
-            var serializer = new ConfigurationContainer()
-            .UseOptimizedNamespaces() //If you want to have all namespaces in root element
-            .Create();
 
             while (true)
             {
@@ -965,7 +976,7 @@ namespace TrafficSimulator
                     Console.WriteLine(endPoint.ToString() + " connected to server");
 
                     Random rand = new Random();
-                    Point start = roadStartingPoints[0];
+                    Point start = roadStartingPoints[rand.Next(roadStartingPoints.Count)];
                     Car newCar = new Car(start.X, start.Y);
                     newCar.cars = cars;
                     cars.Add(newCar);
@@ -973,7 +984,7 @@ namespace TrafficSimulator
                     Buffer.BlockCopy(BitConverter.GetBytes(start.X), 0, startingPos, 0, sizeof(int));
                     Buffer.BlockCopy(BitConverter.GetBytes(start.Y), 0, startingPos, sizeof(int), sizeof(int));
                     mainServer.Send(startingPos, startingPos.Length, endPoint);
-                    Point dest = roadEndPoints[0];
+                    Point dest = roadEndPoints[rand.Next(roadEndPoints.Count)];
                     byte[] destination = new byte[2 * sizeof(int)];
                     newCar.setPath(roadPaths[start][dest]);
                     Buffer.BlockCopy(BitConverter.GetBytes(dest.X), 0, destination, 0, sizeof(int));

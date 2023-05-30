@@ -2,14 +2,14 @@
 using System.Net;
 using System.Text;
 
-namespace CarProcess
+namespace PedestrianProcess
 {
     public class Program
     {
         public static void Main()
         {
-            CarProcess car = new CarProcess();
-            car.Start();
+            PedestrianProcess pedestrians = new PedestrianProcess();
+            pedestrians.Start();
         }
     }
 }
