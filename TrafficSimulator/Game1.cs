@@ -18,6 +18,12 @@ using SharpDX.MediaFoundation;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.Rebar;
 using SharpDX.Direct3D9;
 using System.Drawing.Drawing2D;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
+using ExtendedXmlSerializer.Configuration;
+using ExtendedXmlSerializer;
+using System.Reflection;
 //using System.Drawing;
 
 
@@ -85,19 +91,19 @@ namespace TrafficSimulator
         private Texture2D rect; //Texture used to draw rectangles
         private Texture2D circle; //Texture used to draw circles
         private Dictionary<Point, List<Point>> roadStructure = new Dictionary<Point, List<Point>>();
-//simea
-        private Dictionary<Point, List<Point>> tramStructure = new Dictionary<Point, List<Point>>();   
+        //simea
+        private Dictionary<Point, List<Point>> tramStructure = new Dictionary<Point, List<Point>>();
         //private List<Point> startingPoints = new List<Point>();
         //private List<Point> endPoints = new List<Point>();
         private List<Point> tramStartingPoints = new List<Point>();
-//=======
+        //=======
         private List<Point> roadStartingPoints = new List<Point>();
         private List<Point> roadEndPoints = new List<Point>();
         private List<Point> sidewalkStartingPoints = new List<Point>();
         private List<Point> sidewalkEndPoints = new List<Point>();
         private List<Rectangle> pedCrossingsLights = new List<Rectangle>();
         private List<Rectangle> pedCrossingsNormal = new List<Rectangle>();
-//>>>>>>> master
+        //>>>>>>> master
         private Dictionary<Point, List<Point>> sidewalkStructure = new Dictionary<Point, List<Point>>();
         private const string svgPath = "..\\..\\..\\final.svg";
         private const int scale = 7;
@@ -124,11 +130,38 @@ namespace TrafficSimulator
             //_graphics.IsFullScreen = true;
             _graphics.ApplyChanges();
         }
+        private byte[] bytes;
 
+        protected void SerializePaths(ref Dictionary<Point, Dictionary<Point, List<Point>>> paths, Dictionary<Point,
+            List<Point>> structure, List<Point> startingPoints,
+            List<Point> endPoints, int bruteDepth, string filename)
+        {
+            paths = createPossiblePaths(structure, startingPoints, endPoints, bruteDepth);
+            var serializer = new ConfigurationContainer().UseOptimizedNamespaces().Create();
+            string xml = serializer.Serialize(new XmlWriterSettings { Indent = true }, paths);
+            bytes = Encoding.ASCII.GetBytes(xml);
+            using (StreamWriter writer = new StreamWriter("../../../../" + filename + ".xml"))
+            {
+                writer.WriteLine(xml);
+            }
+        }
+        protected Dictionary<Point, Dictionary<Point, List<Point>>> DeserializePaths(string filename)
+        {
+            Dictionary<Point, Dictionary<Point, List<Point>>> paths;
+            using (XmlReader reader = XmlReader.Create(new StreamReader("../../../../" + filename + ".xml")))
+            {
+                var serializer = new ConfigurationContainer()
+              .UseOptimizedNamespaces() //If you want to have all namespaces in root element
+              .Create();
+                paths = (Dictionary<Point, Dictionary<Point, List<Point>>>)serializer.Deserialize(reader);
+            }
+            return paths;
+        }
         protected override void Initialize()
         {
             // TODO: Add your initialization logic here
             base.Initialize();
+
             TrafficLightsZones = new Dictionary<Point, TrafficLight>[2];
             for (int i = 0; i < TrafficLightsZones.Length; i++)
             {
@@ -143,23 +176,44 @@ namespace TrafficSimulator
             createMovementStructure(roadLineList, roadStructure, roadStartingPoints, roadEndPoints);
             createMovementStructure(sidewalkLineList, sidewalkStructure, sidewalkStartingPoints, sidewalkEndPoints);
             printRoadStructure();
-//<<<<<<< simea
+            //<<<<<<< simea
             //createPossiblePaths();
             //tramStartingPoints.Add(new Point(1085, 406));
             //tramStartingPoints.Add(new Point(105, 455));
             setupTrams();
-//=======
-            roadPaths = createPossiblePaths(roadStructure, roadStartingPoints, roadEndPoints, roadBruteDepth);
-            sidewalkPaths = createPossiblePaths(sidewalkStructure, sidewalkStartingPoints, sidewalkEndPoints, sidewalkBruteDepth);
+            //=======
+
+            //#################################################################################################################
+            //roadPaths = createPossiblePaths(roadStructure, roadStartingPoints, roadEndPoints, roadBruteDepth);
+            //var serializer = new ConfigurationContainer().UseOptimizedNamespaces().Create();
+            //string xml = serializer.Serialize(new XmlWriterSettings { Indent = true }, roadPaths);
+            //bytes = Encoding.ASCII.GetBytes(xml);
+            //using (StreamWriter writer = new StreamWriter("../../../../roadPaths.xml"))
+            //{
+            //    writer.WriteLine(xml);
+            //}
+
+            if (!Debugger.IsAttached)
+            {
+                SerializePaths(ref roadPaths, roadStructure, roadStartingPoints, roadEndPoints, roadBruteDepth, "roadPaths");
+                SerializePaths(ref sidewalkPaths, sidewalkStructure, sidewalkStartingPoints, sidewalkEndPoints, sidewalkBruteDepth, "sidewalkPaths");
+            }
+            else
+            {
+                roadPaths = DeserializePaths("roadPaths");
+                sidewalkPaths = DeserializePaths("sidewalkPaths");
+            }
+
+            //sidewalkPaths = createPossiblePaths(sidewalkStructure, sidewalkStartingPoints, sidewalkEndPoints, sidewalkBruteDepth);
             //>>>>>>> master
             //setupPedestrians();
-            setupCars();
+            //setupCars();
             pedestrians = new PedestrianThread(100, sidewalkStartingPoints, sidewalkEndPoints, sidewalkPaths, sidewalkStructure, pedestriansLights, trams);
             pedestrianThread = new Thread(() => { pedestrians.Run(); });
 
 
 
-            foreach(Thread thread in carThreads) thread.Start();
+            foreach (Thread thread in carThreads) thread.Start();
             pedestrianThread.Start();
 
 
@@ -177,46 +231,49 @@ namespace TrafficSimulator
                     tramThreads.Add(thread);
                 }
             }
+            Task.Factory.StartNew(ListenForClients);
+            Task.Factory.StartNew(ReceiveCarData);
         }
 
-        private Car[] cars;
+        //private Car[] cars;
+        private List<Car> cars = new List<Car>();
         private List<Thread> carThreads = new List<Thread>();
         //private Pedestrian[] pedestrians;
         private PedestrianThread pedestrians;
         private Thread pedestrianThread;
-        private void setupCars()
-        {
-            int carsCount = roadStartingPoints.Count;
-            //carsCount = 2;
-            cars = new Car[carsCount];
-            Random random = new Random();
+        //private void setupCars()
+        //{
+        //    int carsCount = roadStartingPoints.Count;
+        //    //carsCount = 2;
+        //    cars = new Car[carsCount];
+        //    Random random = new Random();
 
-            int i = 0;
-            if (carsCount == 0) return;
-            foreach (Point start in roadStartingPoints)
-            {
-                Random rand = new Random();
-                cars[i] = new Car(start.X, start.Y, roadPaths);
-                //cars[i].setDestination(roadEndPoints[rand.Next(roadEndPoints.Count)]);
-                cars[i].setDestination(roadEndPoints[rand.Next(roadEndPoints.Count)]);
-                cars[i].color = new Color(random.Next(256), random.Next(256), random.Next(256), 255);
-                //TEMP
-                cars[i].cars = cars;
-                i++;
-                if (i == carsCount) break;
-            }
-            foreach (Car car in cars)
-            {
-                if (car != null)
-                {
-                    //In general, the ThreadPool is optimized for short-lived, lightweight tasks that can be executed quickly, while the TaskScheduler is better suited for longer-running, more complex tasks Task was lagging
-                    //Task.Factory.StartNew(() => car.Move(roadStructure));
-                    Thread thread = new Thread(() => { car.Move(roadStructure, roadStartingPoints, roadEndPoints, TrafficLightsZones, trams, pedestrians); });
-                    carThreads.Add(thread);
-                }
-            }
+        //    int i = 0;
+        //    if (carsCount == 0) return;
+        //    foreach (Point start in roadStartingPoints)
+        //    {
+        //        Random rand = new Random();
+        //        cars[i] = new Car(start.X, start.Y, roadPaths);
+        //        //cars[i].setDestination(roadEndPoints[rand.Next(roadEndPoints.Count)]);
+        //        cars[i].setDestination(roadEndPoints[rand.Next(roadEndPoints.Count)]);
+        //        cars[i].color = new Color(random.Next(256), random.Next(256), random.Next(256), 255);
+        //        //TEMP
+        //        cars[i].cars = cars;
+        //        i++;
+        //        if (i == carsCount) break;
+        //    }
+        //    foreach (Car car in cars)
+        //    {
+        //        if (car != null)
+        //        {
+        //            //In general, the ThreadPool is optimized for short-lived, lightweight tasks that can be executed quickly, while the TaskScheduler is better suited for longer-running, more complex tasks Task was lagging
+        //            //Task.Factory.StartNew(() => car.Move(roadStructure));
+        //            Thread thread = new Thread(() => { car.Move(roadStructure, roadStartingPoints, roadEndPoints, TrafficLightsZones, trams, pedestrians); });
+        //            carThreads.Add(thread);
+        //        }
+        //    }
 
-        }
+        //}
 
         public Tram[] trams;
         private List<Thread> tramThreads = new List<Thread>();
@@ -512,9 +569,6 @@ namespace TrafficSimulator
             base.Draw(gameTime);
         }
 
-
-
-
         private void DrawRoads()
         {
             _roadsBatch.Begin();
@@ -531,12 +585,12 @@ namespace TrafficSimulator
 
             foreach (Rectangle coords in pedCrossingsLights)
             {
-                if(pedestriansLights.Values.First().isOpen)
+                if (pedestriansLights.Values.First().isOpen)
                     _sidewalksBatch.Draw(rect, coords, Color.LightGreen);
                 else
                     _sidewalksBatch.Draw(rect, coords, pedCrossingColor);
             }
-            foreach(Rectangle coords in pedCrossingsNormal) _sidewalksBatch.Draw(rect, coords, Color.LightGreen);
+            foreach (Rectangle coords in pedCrossingsNormal) _sidewalksBatch.Draw(rect, coords, Color.LightGreen);
             foreach (Rectangle coords in sidewalkList)
             {
                 if (pedCrossingsNormal.Contains(coords)) continue;
@@ -887,6 +941,154 @@ namespace TrafficSimulator
 
         }
 
+        private UdpClient mainServer = new UdpClient(13131);
+        private UdpClient carServer = new UdpClient(15000);
+        private List<IPEndPoint> clients = new List<IPEndPoint>();
+
+        protected void ListenForClients()
+        {
+            var serializer = new ConfigurationContainer()
+            .UseOptimizedNamespaces() //If you want to have all namespaces in root element
+            .Create();
+
+            while (true)
+            {
+                IPEndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);
+                byte[] buffer = mainServer.Receive(ref endPoint);
+                string receivedMess = Encoding.ASCII.GetString(buffer);
+                if (receivedMess == "Con")
+                {
+                    byte[] port = BitConverter.GetBytes((int)((IPEndPoint)carServer.Client.LocalEndPoint).Port);
+                    mainServer.Send(port, port.Length, endPoint);
+                    clients.Add(endPoint);
+
+                    Console.WriteLine(endPoint.ToString() + " connected to server");
+
+                    Random rand = new Random();
+                    Point start = roadStartingPoints[0];
+                    Car newCar = new Car(start.X, start.Y);
+                    newCar.cars = cars;
+                    cars.Add(newCar);
+                    byte[] startingPos = new byte[2 * sizeof(int)];
+                    Buffer.BlockCopy(BitConverter.GetBytes(start.X), 0, startingPos, 0, sizeof(int));
+                    Buffer.BlockCopy(BitConverter.GetBytes(start.Y), 0, startingPos, sizeof(int), sizeof(int));
+                    mainServer.Send(startingPos, startingPos.Length, endPoint);
+                    Point dest = roadEndPoints[0];
+                    byte[] destination = new byte[2 * sizeof(int)];
+                    newCar.setPath(roadPaths[start][dest]);
+                    Buffer.BlockCopy(BitConverter.GetBytes(dest.X), 0, destination, 0, sizeof(int));
+                    Buffer.BlockCopy(BitConverter.GetBytes(dest.Y), 0, destination, sizeof(int), sizeof(int));
+                    mainServer.Send(destination, destination.Length, endPoint);
+                }
+                else if (receivedMess == "Dis")
+                {
+                    clients.Remove(endPoint);
+                    Console.WriteLine(endPoint.ToString() + " disconnected from the server");
+                }
+            }
+        }
+
+        //private void setupCars()
+        //{
+        //    int carsCount = roadStartingPoints.Count;
+        //    //carsCount = 2;
+        //    cars = new Car[carsCount];
+        //    Random random = new Random();
+
+        //    int i = 0;
+        //    if (carsCount == 0) return;
+        //    foreach (Point start in roadStartingPoints)
+        //    {
+        //        Random rand = new Random();
+        //        cars[i] = new Car(start.X, start.Y, roadPaths);
+        //        //cars[i].setDestination(roadEndPoints[rand.Next(roadEndPoints.Count)]);
+        //        cars[i].setDestination(roadEndPoints[rand.Next(roadEndPoints.Count)]);
+        //        cars[i].color = new Color(random.Next(256), random.Next(256), random.Next(256), 255);
+        //        //TEMP
+        //        cars[i].cars = cars;
+        //        i++;
+        //        if (i == carsCount) break;
+        //    }
+        //    foreach (Car car in cars)
+        //    {
+        //        if (car != null)
+        //        {
+        //            //In general, the ThreadPool is optimized for short-lived, lightweight tasks that can be executed quickly, while the TaskScheduler is better suited for longer-running, more complex tasks Task was lagging
+        //            //Task.Factory.StartNew(() => car.Move(roadStructure));
+        //            Thread thread = new Thread(() => { car.Move(roadStructure, roadStartingPoints, roadEndPoints, TrafficLightsZones, trams, pedestrians); });
+        //            carThreads.Add(thread);
+        //        }
+        //    }
+
+        //}
+
+        protected void ReceiveCarData()
+        {
+            while (true)
+            {
+                IPEndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);
+                byte[] data = carServer.Receive(ref endPoint);
+                string header = Encoding.ASCII.GetString(data, 0, 3);
+                endPoint.Port -= 1;
+                int index = clients.FindIndex(x => x.Equals(endPoint));
+                switch (header)
+                {
+                    case "POS":
+                        {
+                            int xPos = BitConverter.ToInt32(data, 3);
+                            int yPos = BitConverter.ToInt32(data, 3 + sizeof(int));
+
+                            if (cars[index].IsMoveAllowed(TrafficLightsZones, roadStructure, trams, pedestrians))
+                            {
+                                cars[index].setPosition(xPos, yPos);
+                                mainServer.Send(Encoding.ASCII.GetBytes("YES"), 3, clients[index]);
+                            }
+                            else mainServer.Send(Encoding.ASCII.GetBytes("NO"), 2, clients[index]);
+                            break;
+                        }
+                    case "DES":
+                        {
+                            byte[] newStartDest = new byte[4 * sizeof(int)];
+                            Random random = new Random();
+                            Point newStart = roadStartingPoints[random.Next(roadStartingPoints.Count)];
+                            Point newDest = roadEndPoints[random.Next(roadEndPoints.Count)];
+                            cars[index].setPosition(newStart);
+                            //cars[index].setDestination(newDest);
+                            Buffer.BlockCopy(BitConverter.GetBytes(newStart.X), 0, newStartDest, 0, sizeof(int));
+                            Buffer.BlockCopy(BitConverter.GetBytes(newStart.Y), 0, newStartDest, sizeof(int), sizeof(int));
+                            Buffer.BlockCopy(BitConverter.GetBytes(newDest.X), 0, newStartDest, 2 * sizeof(int), sizeof(int));
+                            Buffer.BlockCopy(BitConverter.GetBytes(newDest.Y), 0, newStartDest, 3 * sizeof(int), sizeof(int));
+                            mainServer.Send(newStartDest, newStartDest.Length, clients[index]);
+                            cars[index].setPath(roadPaths[newStart][newDest]);
+                            break;
+                        }
+                    case "NEJ":
+                        {
+                            int xPos = BitConverter.ToInt32(data, 3);
+                            int yPos = BitConverter.ToInt32(data, 3 + sizeof(int));
+                            cars[index].setNextJunction(new Point(xPos, yPos));
+                            break;
+                        }
+                }
+                
+            }
+        }
+
+        //protected void SendPainting()
+        //{
+        //    while (true)
+        //    {
+        //        Tuple<byte[], int> tmp = paintingData.Take();
+        //        byte[] data = new byte[tmp.Item1.Length + 1];
+        //        data[0] = (byte)tmp.Item2;
+        //        Buffer.BlockCopy(tmp.Item1, 0, data, 1, tmp.Item1.Length);
+        //        foreach (var client in clients)
+        //        {
+        //            paintSever.Send(data, data.Length, client);
+        //        }
+
+        //    }
+        //}
 
 
 

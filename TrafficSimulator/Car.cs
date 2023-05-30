@@ -32,7 +32,7 @@ namespace TrafficSimulator
 
 
         //TEMP
-        public Car[] cars;
+        public List<Car> cars;
 
 
 
@@ -42,6 +42,14 @@ namespace TrafficSimulator
             position = new Point(xPos, yPos);
             init();
             this.possiblePaths = possiblePaths;
+        }
+
+        public Car(int xPos, int yPos)
+        {
+            position = new Point(xPos, yPos);
+            Random random = new Random();
+            color = new Color(random.Next(256), random.Next(256), random.Next(256), 255);
+            init();
         }
         public Car(int xPos, int yPos, float xSpeed, float ySpeed)
         {
@@ -59,6 +67,18 @@ namespace TrafficSimulator
             rotate();
         }
 
+        public void setPosition(int x, int y)
+        {
+            position.X = x; position.Y = y;
+            speedVect = new Vector2(Math.Sign(nextJunction.X - position.X) * speed, Math.Sign(nextJunction.Y - position.Y) * speed);
+            rotate();
+        }
+        public void setPosition(Point position)
+        {
+            this.position = position;
+            speedVect = new Vector2(Math.Sign(nextJunction.X - position.X) * speed, Math.Sign(nextJunction.Y - position.Y) * speed);
+        }
+
         private Queue<Point> path;
 
         public void setDestination(Point dest)
@@ -66,9 +86,24 @@ namespace TrafficSimulator
             destination = dest;
             path = new Queue<Point>(possiblePaths[position][dest]);
             path.Dequeue();
-            nextJunction = path.Dequeue();
+            setNextJunction(path.Dequeue());
             speedVect = new Vector2(Math.Sign(nextJunction.X - position.X) * speed, Math.Sign(nextJunction.Y - position.Y) * speed);
             rotate();
+            //setTurn();
+        }
+
+        public void setNextJunction(Point nextJunction)
+        {
+            path.Dequeue();
+            this.nextJunction = nextJunction;
+            speedVect = new Vector2(Math.Sign(nextJunction.X - position.X) * speed, Math.Sign(nextJunction.Y - position.Y) * speed);
+            rotate();
+           // setTurn();
+        }
+
+        public void setPath(List<Point> path)
+        {
+            this.path = new Queue<Point>(path);
         }
 
 
@@ -102,14 +137,14 @@ namespace TrafficSimulator
                     stopwatch.Stop();
                     TimeSpan timeSpan = stopwatch.Elapsed;
                     double time;
-                    if (Debugger.IsAttached)
-                    {
-                        time = 0.05;
-                    }
-                    else
-                    {
+                    //if (Debugger.IsAttached)
+                    //{
+                    //    time = 0.05;
+                    //}
+                    //else
+                    //{
                         time = timeSpan.TotalSeconds;
-                    }
+                    //}
                     stopwatch.Restart();
                     stopwatch.Start();
                     if (!IsMoveAllowed(trafficLights, roadStructure, tram, pedestrianManager))
@@ -199,7 +234,7 @@ namespace TrafficSimulator
         }
 //POPIERDOLI MNIE OD TYCH POLSKICH NAZW,
         //CO TY MADAJCZAK JESTES?
-        private bool IsMoveAllowed(Dictionary<Point, TrafficLight>[] trafficLights, Dictionary<Point, List<Point>> roadStructure, Tram[] trams, PedestrianThread pedestrianManager)
+        public bool IsMoveAllowed(Dictionary<Point, TrafficLight>[] trafficLights, Dictionary<Point, List<Point>> roadStructure, Tram[] trams, PedestrianThread pedestrianManager)
         
         {
             List<Point> rownorzedne = new List<Point>();
