@@ -1130,7 +1130,7 @@ namespace TrafficSimulator
                             string reply = "";
                             for (int i = 0; i < 100; i++)
                             {
-                                positions[i].X = BitConverter.ToInt32(data, 3 + 2 *i* sizeof(int));
+                                positions[i].X = BitConverter.ToInt32(data, 3 + 2 * i * sizeof(int));
                                 positions[i].Y = BitConverter.ToInt32(data, 3 + 2 * i * sizeof(int) + sizeof(int));
                                 if (pedestrians.isMoveAllowed(pedestrians.pedestrians[i], 5, trams))
                                 {
@@ -1141,6 +1141,17 @@ namespace TrafficSimulator
                             }
 
                             mainServer.Send(Encoding.ASCII.GetBytes(reply), reply.Length, pedClients[index]);
+                            break;
+                        }
+                    case "NEJ":
+                        {
+                            Point[] nextJuncs = new Point[100];
+                            for (int i = 0; i < 100; i++)
+                            {
+                                nextJuncs[i].X = BitConverter.ToInt32(data, 3 + 2 * i * sizeof(int));
+                                nextJuncs[i].Y = BitConverter.ToInt32(data, 3 + 2 * i * sizeof(int) + sizeof(int));
+                                pedestrians.pedestrians[i].nextJunction = nextJuncs[i];
+                            }
                             break;
                         }
                 }

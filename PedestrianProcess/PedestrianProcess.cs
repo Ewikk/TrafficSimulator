@@ -231,6 +231,14 @@ namespace PedestrianProcess
                         if (message[i] == 'N')
                             pedestrians[i].position = prevPoses[i];
                     }
+                    byte[] nextJun = new byte[3 + pedestrianCount * 2 * sizeof(int)];
+                    Buffer.BlockCopy(Encoding.ASCII.GetBytes("NEJ"), 0, nextJun, 0, 3);
+                    for (int i = 0; i < pedestrianCount; i++)
+                    {
+                        Buffer.BlockCopy(BitConverter.GetBytes(pedestrians[i].nextJunction.X), 0, nextJun, 3 + i * 2 * sizeof(int), sizeof(int));
+                        Buffer.BlockCopy(BitConverter.GetBytes(pedestrians[i].nextJunction.Y), 0, nextJun, 3 + i * 2 * sizeof(int) + sizeof(int), sizeof(int));
+                    }
+                    dataServer.Send(nextJun, nextJun.Length);
                 }
             }
             catch (ThreadInterruptedException)
