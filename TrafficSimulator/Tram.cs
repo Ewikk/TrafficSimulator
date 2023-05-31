@@ -31,7 +31,7 @@ namespace TrafficSimulator
         private Stopwatch stopwatch = new Stopwatch();
         private List<Point> nextDest1;
         private List<Point> nextDest2;
-        public Tram[] siema;
+        public List<Tram> siema;
         private bool isGoing = true;
 
         public Tram(int xPos, int yPos, float xSpeed, float ySpeed)
@@ -131,6 +131,11 @@ namespace TrafficSimulator
                 }
             }
             return newDestination;
+        }
+
+        public void setPosition(Point newPosition)
+        {
+            position = newPosition;
         }
 
         public void Move()

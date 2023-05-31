@@ -194,7 +194,7 @@ namespace TrafficSimulator
             //createPossiblePaths();
             //tramStartingPoints.Add(new Point(1085, 406));
             //tramStartingPoints.Add(new Point(105, 455));
-            setupTrams();
+            //setupTrams();
             //=======
 
             //#################################################################################################################
@@ -236,7 +236,7 @@ namespace TrafficSimulator
 
 
             //tramStructure.Add(new Point(0, 0), new List<Point>());
-            foreach (Tram tram in trams)
+           /* foreach (Tram tram in trams)
             {
                 if (tram != null)
                 {
@@ -246,10 +246,11 @@ namespace TrafficSimulator
                     thread.Start();
                     tramThreads.Add(thread);
                 }
-            }
+            }*/
             Task.Factory.StartNew(ListenForClients);
             Task.Factory.StartNew(ReceiveCarData);
             Task.Factory.StartNew(ReceivePedData);
+            Task.Factory.StartNew(ReceiveTramData);
         }
 
         //private Car[] cars;
@@ -292,31 +293,9 @@ namespace TrafficSimulator
 
         //}
 
-        public Tram[] trams;
+        public List<Tram> trams = new List<Tram>();
         private List<Thread> tramThreads = new List<Thread>();
-        private void setupTrams()
-        {
-            trams = new Tram[2];
-            Random random = new Random();
-
-            /*            int i = 0;
-                        foreach (Point start in tramStartingPoints)
-                        {
-                            Random rand = new Random();
-                            trams[i] = new Tram(start.X, start.Y, 200,0);
-                            trams[i].color = new Color(random.Next(256), random.Next(256), random.Next(256), 255);
-                            i++;
-                            if (i == 2) break;
-                        }*/
-            Point a = new Point(1470, 406);
-            Point b = new Point(0, 455);
-            trams[0] = new Tram(a.X, a.Y, -200, 0);
-            trams[0].color = new Color(random.Next(256), random.Next(256), random.Next(256), 255);
-
-            trams[1] = new Tram(b.X, b.Y, 200, 0);
-            trams[1].color = new Color(random.Next(256), random.Next(256), random.Next(256), 255);
-
-        }
+       
         //TO BE DELETED
         //private void setupPedestrians()
         //{
@@ -961,8 +940,10 @@ namespace TrafficSimulator
         private UdpClient mainServer = new UdpClient(13131);
         private UdpClient carServer = new UdpClient(15000);
         private UdpClient pedestrianServer = new UdpClient(16000);
+        private UdpClient tServer = new UdpClient(17000);
         private List<IPEndPoint> carClients = new List<IPEndPoint>();
         private List<IPEndPoint> pedClients = new List<IPEndPoint>();
+        private List<IPEndPoint> tClients = new List<IPEndPoint>();
 
         protected void ListenForClients()
         {
@@ -1015,6 +996,37 @@ namespace TrafficSimulator
                         }
 
                         Console.WriteLine(endPoint.ToString() + " connected to server");
+                    }
+                    else if (receivedMess == "TRA")
+                    {
+                        byte[] port = BitConverter.GetBytes((int)((IPEndPoint)tServer.Client.LocalEndPoint).Port);
+                        mainServer.Send(port, port.Length, endPoint);
+                        tClients.Add(endPoint);
+
+                        Console.WriteLine(endPoint.ToString() + " connected to server");
+                        Random rand = new Random();
+                        int id = rand.Next(0, 2);
+                        int xpos, ypos, xspeed;
+                        if (id == 0)
+                        {
+                            xpos = 1470;
+                            ypos = 406;
+                            xspeed = -200;
+                        }
+                        else
+                        {
+                            xpos = 0;
+                            ypos = 455;
+                            xspeed = 200;
+                        }
+                        Tram newCar = new Tram(xpos, ypos, xspeed, 0);
+                        newCar.color = new Color(rand.Next(256), rand.Next(256), rand.Next(256), 255);
+                        trams.Add(newCar);
+                        byte[] startingPos = new byte[3 * sizeof(int)];
+                        Buffer.BlockCopy(BitConverter.GetBytes(xpos), 0, startingPos, 0, sizeof(int));
+                        Buffer.BlockCopy(BitConverter.GetBytes(ypos), 0, startingPos, sizeof(int), sizeof(int));
+                        Buffer.BlockCopy(BitConverter.GetBytes(xspeed), 0, startingPos, 2 * sizeof(int), sizeof(int));
+                        mainServer.Send(startingPos, startingPos.Length, endPoint);
                     }
                 }
                 else if (receivedMess == "Dis")
@@ -1155,6 +1167,29 @@ namespace TrafficSimulator
                             break;
                         }
                 }
+            }
+        }
+
+        protected void ReceiveTramData()
+        {
+            while (true)
+            {
+                IPEndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);
+                byte[] data = tServer.Receive(ref endPoint);
+                string header = Encoding.ASCII.GetString(data, 0, 3);
+                endPoint.Port -= 1;
+                int index = tClients.FindIndex(x => x.Equals(endPoint));
+                switch (header)
+                {
+                    case "POS":
+                        {
+                            int xPos = BitConverter.ToInt32(data, 3);
+                            int yPos = BitConverter.ToInt32(data, 3 + sizeof(int));
+                            trams[index].setPosition(new Point(xPos, yPos));
+                            break;
+                        }
+                }
+
             }
         }
 

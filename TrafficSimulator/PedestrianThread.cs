@@ -22,8 +22,8 @@ namespace TrafficSimulator
         private Stopwatch stopwatch = new Stopwatch();
         private Vector2 Size = new Vector2(10, 10);
         private Dictionary<Point, TrafficLight> trafficLights;
-        private Tram[] trams;
-        public PedestrianThread(int count, List<Point> startingPoints, List<Point> endPoints, Dictionary<Point, Dictionary<Point, List<Point>>> paths, Dictionary<Point, List<Point>> sidewalkStructure, Dictionary<Point, TrafficLight> trafficLights, Tram[] tram)
+        private List<Tram> trams;
+        public PedestrianThread(int count, List<Point> startingPoints, List<Point> endPoints, Dictionary<Point, Dictionary<Point, List<Point>>> paths, Dictionary<Point, List<Point>> sidewalkStructure, Dictionary<Point, TrafficLight> trafficLights, List<Tram> tram)
         {
             pedestrianCount = count;
             this.startingPoints = startingPoints;
@@ -123,11 +123,11 @@ namespace TrafficSimulator
             }
         }
 
-        public bool isMoveAllowed(Pedestrian pedestrian, int distanceBetween, Tram[] trams)
+        public bool isMoveAllowed(Pedestrian pedestrian, int distanceBetween, List<Tram> trams)
         {
             return isLightGreen(pedestrian, distanceBetween) && !beforeTram(pedestrian, distanceBetween, trams);
         }
-        private bool beforeTram(Pedestrian pedastrian, int distanceBetweenCars, Tram[] trams)
+        private bool beforeTram(Pedestrian pedastrian, int distanceBetweenCars, List<Tram> trams)
         {
             foreach (Tram tram in trams)
             {

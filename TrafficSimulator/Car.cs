@@ -129,7 +129,7 @@ namespace TrafficSimulator
         }
 
 
-        public void Move(Dictionary<Point, List<Point>> roadStructure, List<Point> startingPoints, List<Point> endPoints, Dictionary<Point, TrafficLight>[] trafficLights, Tram[] tram, PedestrianThread pedestrianManager)
+        public void Move(Dictionary<Point, List<Point>> roadStructure, List<Point> startingPoints, List<Point> endPoints, Dictionary<Point, TrafficLight>[] trafficLights, List<Tram> tram, PedestrianThread pedestrianManager)
         {
             try
             {
@@ -236,7 +236,7 @@ namespace TrafficSimulator
         }
 //POPIERDOLI MNIE OD TYCH POLSKICH NAZW,
         //CO TY MADAJCZAK JESTES?
-        public bool IsMoveAllowed(Dictionary<Point, TrafficLight>[] trafficLights, Dictionary<Point, List<Point>> roadStructure, Tram[] trams, PedestrianThread pedestrianManager)
+        public bool IsMoveAllowed(Dictionary<Point, TrafficLight>[] trafficLights, Dictionary<Point, List<Point>> roadStructure, List<Tram> trams, PedestrianThread pedestrianManager)
         
         {
             List<Point> rownorzedne = new List<Point>();
@@ -286,7 +286,7 @@ namespace TrafficSimulator
             return false;
         }
 
-        private bool ClosetoTram(int distanceBetweenCars, Tram[] trams )
+        private bool ClosetoTram(int distanceBetweenCars, List<Tram> trams )
         {
             int lowerTracksY = 455;
             int upperTracksY = 406;
@@ -319,7 +319,7 @@ namespace TrafficSimulator
             return beforeTram(distanceBetweenCars, trams);
         }
 
-        private bool beforeTram(int distanceBetweenCars, Tram[] trams)
+        private bool beforeTram(int distanceBetweenCars, List<Tram> trams)
         {
             foreach (Tram tram in trams)
             {

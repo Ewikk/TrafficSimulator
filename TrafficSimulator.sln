@@ -7,7 +7,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TrafficSimulator", "Traffic
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CarProcess", "CarProcess\CarProcess.csproj", "{3BF92BAE-480E-417C-8123-D23B3FE47C56}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PedestrianProcess", "PedestrianProcess\PedestrianProcess.csproj", "{C7FABF81-9EB8-4229-B7F9-36E886FBDB83}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PedestrianProcess", "PedestrianProcess\PedestrianProcess.csproj", "{C7FABF81-9EB8-4229-B7F9-36E886FBDB83}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TramProcess", "TramProcess\TramProcess.csproj", "{1B501951-A659-4703-AA27-6812930D981E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,6 +35,12 @@ Global
 		{C7FABF81-9EB8-4229-B7F9-36E886FBDB83}.Release|Any CPU.Build.0 = Release|Any CPU
 		{C7FABF81-9EB8-4229-B7F9-36E886FBDB83}.test|Any CPU.ActiveCfg = Debug|Any CPU
 		{C7FABF81-9EB8-4229-B7F9-36E886FBDB83}.test|Any CPU.Build.0 = Debug|Any CPU
+		{1B501951-A659-4703-AA27-6812930D981E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1B501951-A659-4703-AA27-6812930D981E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1B501951-A659-4703-AA27-6812930D981E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1B501951-A659-4703-AA27-6812930D981E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1B501951-A659-4703-AA27-6812930D981E}.test|Any CPU.ActiveCfg = Debug|Any CPU
+		{1B501951-A659-4703-AA27-6812930D981E}.test|Any CPU.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
