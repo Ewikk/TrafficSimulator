@@ -123,7 +123,7 @@ namespace TrafficSimulator
             }
         }
 
-        private bool isMoveAllowed(Pedestrian pedestrian, int distanceBetween, Tram[] trams)
+        public bool isMoveAllowed(Pedestrian pedestrian, int distanceBetween, Tram[] trams)
         {
             return isLightGreen(pedestrian, distanceBetween) && !beforeTram(pedestrian, distanceBetween, trams);
         }

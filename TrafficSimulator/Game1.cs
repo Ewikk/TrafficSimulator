@@ -217,18 +217,20 @@ namespace TrafficSimulator
                 roadPaths = DeserializePaths("roadPaths");
                 sidewalkPaths = DeserializePaths("sidewalkPaths");
             }
+            //TEMP
+            SerializeSidewalks();
 
             //sidewalkPaths = createPossiblePaths(sidewalkStructure, sidewalkStartingPoints, sidewalkEndPoints, sidewalkBruteDepth);
             //>>>>>>> master
             //setupPedestrians();
             //setupCars();
             pedestrians = new PedestrianThread(100, sidewalkStartingPoints, sidewalkEndPoints, sidewalkPaths, sidewalkStructure, pedestriansLights, trams);
-            pedestrianThread = new Thread(() => { pedestrians.Run(); });
+            //pedestrianThread = new Thread(() => { pedestrians.Run(); });
 
 
 
             foreach (Thread thread in carThreads) thread.Start();
-            pedestrianThread.Start();
+            //pedestrianThread.Start();
 
 
 
@@ -247,6 +249,7 @@ namespace TrafficSimulator
             }
             Task.Factory.StartNew(ListenForClients);
             Task.Factory.StartNew(ReceiveCarData);
+            Task.Factory.StartNew(ReceivePedData);
         }
 
         //private Car[] cars;
@@ -957,7 +960,9 @@ namespace TrafficSimulator
 
         private UdpClient mainServer = new UdpClient(13131);
         private UdpClient carServer = new UdpClient(15000);
-        private List<IPEndPoint> clients = new List<IPEndPoint>();
+        private UdpClient pedestrianServer = new UdpClient(16000);
+        private List<IPEndPoint> carClients = new List<IPEndPoint>();
+        private List<IPEndPoint> pedClients = new List<IPEndPoint>();
 
         protected void ListenForClients()
         {
@@ -966,34 +971,55 @@ namespace TrafficSimulator
             {
                 IPEndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);
                 byte[] buffer = mainServer.Receive(ref endPoint);
-                string receivedMess = Encoding.ASCII.GetString(buffer);
+                string receivedMess = Encoding.ASCII.GetString(buffer, 0, 3);
                 if (receivedMess == "Con")
                 {
-                    byte[] port = BitConverter.GetBytes((int)((IPEndPoint)carServer.Client.LocalEndPoint).Port);
-                    mainServer.Send(port, port.Length, endPoint);
-                    clients.Add(endPoint);
+                    receivedMess = Encoding.ASCII.GetString(buffer, 3, 3);
+                    if (receivedMess == "CAR")
+                    {
+                        byte[] port = BitConverter.GetBytes((int)((IPEndPoint)carServer.Client.LocalEndPoint).Port);
+                        mainServer.Send(port, port.Length, endPoint);
+                        carClients.Add(endPoint);
 
-                    Console.WriteLine(endPoint.ToString() + " connected to server");
+                        Console.WriteLine(endPoint.ToString() + " connected to server");
 
-                    Random rand = new Random();
-                    Point start = roadStartingPoints[rand.Next(roadStartingPoints.Count)];
-                    Car newCar = new Car(start.X, start.Y);
-                    newCar.cars = cars;
-                    cars.Add(newCar);
-                    byte[] startingPos = new byte[2 * sizeof(int)];
-                    Buffer.BlockCopy(BitConverter.GetBytes(start.X), 0, startingPos, 0, sizeof(int));
-                    Buffer.BlockCopy(BitConverter.GetBytes(start.Y), 0, startingPos, sizeof(int), sizeof(int));
-                    mainServer.Send(startingPos, startingPos.Length, endPoint);
-                    Point dest = roadEndPoints[rand.Next(roadEndPoints.Count)];
-                    byte[] destination = new byte[2 * sizeof(int)];
-                    newCar.setPath(roadPaths[start][dest]);
-                    Buffer.BlockCopy(BitConverter.GetBytes(dest.X), 0, destination, 0, sizeof(int));
-                    Buffer.BlockCopy(BitConverter.GetBytes(dest.Y), 0, destination, sizeof(int), sizeof(int));
-                    mainServer.Send(destination, destination.Length, endPoint);
+                        Random rand = new Random();
+                        Point start = roadStartingPoints[rand.Next(roadStartingPoints.Count)];
+                        Car newCar = new Car(start.X, start.Y);
+                        newCar.cars = cars;
+                        cars.Add(newCar);
+                        byte[] startingPos = new byte[2 * sizeof(int)];
+                        Buffer.BlockCopy(BitConverter.GetBytes(start.X), 0, startingPos, 0, sizeof(int));
+                        Buffer.BlockCopy(BitConverter.GetBytes(start.Y), 0, startingPos, sizeof(int), sizeof(int));
+                        mainServer.Send(startingPos, startingPos.Length, endPoint);
+                        Point dest = roadEndPoints[rand.Next(roadEndPoints.Count)];
+                        byte[] destination = new byte[2 * sizeof(int)];
+                        newCar.setPath(roadPaths[start][dest]);
+                        Buffer.BlockCopy(BitConverter.GetBytes(dest.X), 0, destination, 0, sizeof(int));
+                        Buffer.BlockCopy(BitConverter.GetBytes(dest.Y), 0, destination, sizeof(int), sizeof(int));
+                        mainServer.Send(destination, destination.Length, endPoint);
+                    }
+                    else if (receivedMess == "PED")
+                    {
+                        byte[] port = BitConverter.GetBytes((int)((IPEndPoint)pedestrianServer.Client.LocalEndPoint).Port);
+                        mainServer.Send(port, port.Length, endPoint);
+                        pedClients.Add(endPoint);
+                        Console.WriteLine(endPoint.ToString() + " connected to server");
+                        IPEndPoint endPoint1 = new IPEndPoint(IPAddress.Any, 0);
+                        byte[] positions = mainServer.Receive(ref endPoint1);
+
+                        for (int i = 0; i < 100; i++)
+                        {
+                            pedestrians.pedestrians[i].position.X = BitConverter.ToInt32(positions, 3 + 2 * sizeof(int));
+                            pedestrians.pedestrians[i].position.Y = BitConverter.ToInt32(positions, 3 + 2 * sizeof(int) + sizeof(int));
+                        }
+
+                        Console.WriteLine(endPoint.ToString() + " connected to server");
+                    }
                 }
                 else if (receivedMess == "Dis")
                 {
-                    clients.Remove(endPoint);
+                    carClients.Remove(endPoint);
                     Console.WriteLine(endPoint.ToString() + " disconnected from the server");
                 }
             }
@@ -1041,7 +1067,7 @@ namespace TrafficSimulator
                 byte[] data = carServer.Receive(ref endPoint);
                 string header = Encoding.ASCII.GetString(data, 0, 3);
                 endPoint.Port -= 1;
-                int index = clients.FindIndex(x => x.Equals(endPoint));
+                int index = carClients.FindIndex(x => x.Equals(endPoint));
                 switch (header)
                 {
                     case "POS":
@@ -1052,9 +1078,9 @@ namespace TrafficSimulator
                             if (cars[index].IsMoveAllowed(TrafficLightsZones, roadStructure, trams, pedestrians))
                             {
                                 cars[index].setPosition(xPos, yPos);
-                                mainServer.Send(Encoding.ASCII.GetBytes("YES"), 3, clients[index]);
+                                mainServer.Send(Encoding.ASCII.GetBytes("YES"), 3, carClients[index]);
                             }
-                            else mainServer.Send(Encoding.ASCII.GetBytes("NO"), 2, clients[index]);
+                            else mainServer.Send(Encoding.ASCII.GetBytes("NO"), 2, carClients[index]);
                             break;
                         }
                     case "DES":
@@ -1069,7 +1095,7 @@ namespace TrafficSimulator
                             Buffer.BlockCopy(BitConverter.GetBytes(newStart.Y), 0, newStartDest, sizeof(int), sizeof(int));
                             Buffer.BlockCopy(BitConverter.GetBytes(newDest.X), 0, newStartDest, 2 * sizeof(int), sizeof(int));
                             Buffer.BlockCopy(BitConverter.GetBytes(newDest.Y), 0, newStartDest, 3 * sizeof(int), sizeof(int));
-                            mainServer.Send(newStartDest, newStartDest.Length, clients[index]);
+                            mainServer.Send(newStartDest, newStartDest.Length, carClients[index]);
                             cars[index].setPath(roadPaths[newStart][newDest]);
                             break;
                         }
@@ -1081,7 +1107,43 @@ namespace TrafficSimulator
                             break;
                         }
                 }
-                
+
+            }
+        }
+
+        protected void ReceivePedData()
+        {
+            while (true)
+            {
+                IPEndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);
+                byte[] data = pedestrianServer.Receive(ref endPoint);
+                string header = Encoding.ASCII.GetString(data, 0, 3);
+                endPoint.Port -= 1;
+                int index = pedClients.FindIndex(x => x.Equals(endPoint));
+                switch (header)
+                {
+                    case "POS":
+                        {
+                            //int xPos = BitConverter.ToInt32(data, 3);
+                            //int yPos = BitConverter.ToInt32(data, 3 + sizeof(int));
+                            Point[] positions = new Point[100];
+                            string reply = "";
+                            for (int i = 0; i < 100; i++)
+                            {
+                                positions[i].X = BitConverter.ToInt32(data, 3 + 2 *i* sizeof(int));
+                                positions[i].Y = BitConverter.ToInt32(data, 3 + 2 * i * sizeof(int) + sizeof(int));
+                                if (pedestrians.isMoveAllowed(pedestrians.pedestrians[i], 5, trams))
+                                {
+                                    pedestrians.pedestrians[i].position = positions[i];
+                                    reply += "Y";
+                                }
+                                else reply += "N";
+                            }
+
+                            mainServer.Send(Encoding.ASCII.GetBytes(reply), reply.Length, pedClients[index]);
+                            break;
+                        }
+                }
             }
         }
 
@@ -1176,5 +1238,23 @@ namespace TrafficSimulator
 
 
         //}
+
+
+        protected void SerializeSidewalks()
+        {
+            var serializer = new ConfigurationContainer().UseOptimizedNamespaces().Create();
+            string xml = serializer.Serialize(new XmlWriterSettings { Indent = true }, sidewalkEndPoints);
+            bytes = Encoding.ASCII.GetBytes(xml);
+            using (StreamWriter writer = new StreamWriter("../../../../sidewalkEndPoints.xml"))
+            {
+                writer.WriteLine(xml);
+            }
+            string xml2 = serializer.Serialize(new XmlWriterSettings { Indent = true }, sidewalkStartingPoints);
+            bytes = Encoding.ASCII.GetBytes(xml2);
+            using (StreamWriter writer = new StreamWriter("../../../../sidewalkStartingPoints.xml"))
+            {
+                writer.WriteLine(xml2);
+            }
+        }
     }
 }

@@ -91,7 +91,7 @@ namespace TrafficSimulator
             setNextJunction(path.Dequeue());
             speedVect = new Vector2(Math.Sign(nextJunction.X - position.X) * speed, Math.Sign(nextJunction.Y - position.Y) * speed);
             rotate();
-            setTurn();
+            //setTurn();
         }
 
         public void setNextJunction(Point nextJunction)
@@ -100,7 +100,7 @@ namespace TrafficSimulator
             this.nextJunction = nextJunction;
             speedVect = new Vector2(Math.Sign(nextJunction.X - position.X) * speed, Math.Sign(nextJunction.Y - position.Y) * speed);
             rotate();
-            setTurn();
+           // setTurn();
         }
 
         public void setPath(List<Point> path)

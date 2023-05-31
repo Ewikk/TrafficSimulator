@@ -23,11 +23,10 @@ namespace PedestrianProcess
         private Queue<Point> path;
 
         Dictionary<Point, Dictionary<Point, List<Point>>> possiblePaths;
-        public Pedestrian(int xPos, int yPos, Dictionary<Point, Dictionary<Point, List<Point>>> possiblePaths)
+        public Pedestrian(int xPos, int yPos)
         {
             position = new Point(xPos, yPos);
             init();
-            this.possiblePaths = possiblePaths;
         }
         public Pedestrian(int xPos, int yPos, float xSpeed, float ySpeed)
         {

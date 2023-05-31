@@ -45,7 +45,7 @@ namespace CarProcess
                 roadPaths = (Dictionary<Point, Dictionary<Point, List<Point>>>)serializer.Deserialize(reader);
             }
             connectionServer.Connect("localhost", 13131);
-            connectionServer.Send(Encoding.ASCII.GetBytes("Con"), 3);
+            connectionServer.Send(Encoding.ASCII.GetBytes("ConCAR"), 6);
             dataServerEndPoint = new IPEndPoint(IPAddress.Any, 0);
             var port = connectionServer.Receive(ref dataServerEndPoint);
             dataServerEndPoint.Port = BitConverter.ToInt32(port, 0);
