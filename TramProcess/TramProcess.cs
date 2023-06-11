@@ -59,7 +59,7 @@ namespace TramProcess
             IPEndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);
             byte[] startingPos = connectionServer.Receive(ref endPoint);
             int xPos = BitConverter.ToInt32(startingPos, 0);
-            int yPos = BitConverter.ToInt32(startingPos, sizeof(int));
+            int yPos = BitConverter.ToInt32(startingPos, sizeof(int)); 
             int xSpeed = BitConverter.ToInt32(startingPos, 2 * sizeof(int));
             position = new Point(xPos, yPos);
             speedVect = new Vector2(xSpeed, 0);
@@ -79,9 +79,14 @@ namespace TramProcess
             Move();
         }
 
-
-
-
+        private void updatePos()
+        {
+            byte[] newPos = new byte[3 * sizeof(int) + 3];
+            Buffer.BlockCopy(Encoding.ASCII.GetBytes("POS"), 0, newPos, 0, 3);
+            Buffer.BlockCopy(BitConverter.GetBytes(position.X), 0, newPos, 3, sizeof(int));
+            Buffer.BlockCopy(BitConverter.GetBytes(position.Y), 0, newPos, 3 + sizeof(int), sizeof(int));
+            dataServer.Send(newPos, newPos.Length);
+        }
 
         private void init()
         {
@@ -168,54 +173,89 @@ namespace TramProcess
             while (true)
             {
 
-                if (!isGoing)
-                {
-                    int sleepms = 3000;
-                    Thread.Sleep(sleepms);
-                    isGoing = true;
-                    position.X -= (int)(speedVect.X) * sleepms / 1000;
-                }
-
                 stopwatch.Stop();
-                TimeSpan timeSpan = stopwatch.Elapsed;
-                double time;
 
-                time = timeSpan.TotalSeconds;
+                //double time = stopwatch.Elapsed.TotalSeconds;
+                double time = 0.03;
+
+
                 stopwatch.Restart();
-                stopwatch.Start();
+
                 int prevPosX = position.X;
                 int prevPosY = position.Y;
-                if (isGoing)
-                {
 
+                int acceleration = 1;
+                if (position.Y == 406)
+                    acceleration = 100;
+                else
+                    acceleration = -100;
+
+                int timeToStop = (int)(speedVect.X / -acceleration);
+                int distance = -(int)(speedVect.X * timeToStop + acceleration * timeToStop * timeToStop / 2);
+                if ((position.X > 1085 + distance - 10 && position.X < 1085 + distance + 10) || ((position.X > 105 + distance - 10 && position.X < 105 + distance + 10) || position.X < 105))
+                {
+                    while ((speedVect.X > 0 && acceleration < 0) || (speedVect.X < 0 && acceleration > 0))
+                    {
+                        if (time < 0.1)
+                            time = 0.03;
+                        speedVect.X += (int)(acceleration * time);
+
+                        prevPosX = position.X;
+                        position.X += (int)(speedVect.X * time);
+
+                        updatePos();
+
+                        Thread.Sleep(10);
+                        stopwatch.Restart();
+
+                        if (Math.Sign(prevPosX - destination.X) != Math.Sign(position.X - destination.X))
+                        {
+                            destination = setDestination(destination);
+
+                        }
+                    }
+
+                    Thread.Sleep(2000);
+                    stopwatch.Restart();
+
+                    while (speedVect.X < speed && speedVect.X > -speed)
+                    {
+                        if (speedVect.X + (int)(-acceleration * time) > speed || speedVect.X + (int)(-acceleration * time) < -speed)
+                            break;
+                        speedVect.X += (int)(-acceleration * time);
+
+                        prevPosX = position.X;
+                        position.X += (int)(speedVect.X * time);
+
+                        updatePos();
+                        Thread.Sleep(10);
+                        stopwatch.Restart();
+
+
+                        if (Math.Sign(prevPosX - destination.X) != Math.Sign(position.X - destination.X))
+                        {
+                            destination = setDestination(destination);
+
+                        }
+                    }
+                }
+                else
+                {
+                    prevPosX = position.X;
                     position.X += (int)(speedVect.X * time);
                     position.Y += (int)(speedVect.Y * time);
                 }
 
-
                 if (Math.Sign(prevPosX - destination.X) != Math.Sign(position.X - destination.X))
                 {
-                    position = destination;
                     destination = setDestination(destination);
 
                 }
-
-                byte[] newPos = new byte[3 * sizeof(int) + 3];
-                Buffer.BlockCopy(Encoding.ASCII.GetBytes("POS"), 0, newPos, 0, 3);
-                Buffer.BlockCopy(BitConverter.GetBytes(position.X), 0, newPos, 3, sizeof(int));
-                Buffer.BlockCopy(BitConverter.GetBytes(position.Y), 0, newPos, 3 + sizeof(int), sizeof(int));
-                dataServer.Send(newPos, newPos.Length);
-/*                IPEndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);
-                byte[] ans = connectionServer.Receive(ref endPoint);
-                string reply = Encoding.ASCII.GetString(ans, 0, ans.Length);
-                if (reply == "NO")
-                {
-                    Console.WriteLine("brak ruchu");
-                    position.X = prevPosX; position.Y = prevPosY;
-                }*/
+                updatePos();
                 Thread.Sleep(15);
 
             }
         }
     }
 }
+
