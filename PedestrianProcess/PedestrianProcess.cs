@@ -30,6 +30,7 @@ namespace PedestrianProcess
 {
     public class PedestrianProcess
     {
+        private string ipAdress = "FILL IN";
         private int pedestrianCount = 100;
         public Pedestrian[] pedestrians = null;
         private List<Point> startingPoints;
@@ -50,13 +51,13 @@ namespace PedestrianProcess
         public void Start()
         {
             Deserialize();
-            connectionServer.Connect("localhost", 13131);
+            connectionServer.Connect(ipAdress, 13131);
             connectionStream = connectionServer.GetStream();
             connectionStream.Write(Encoding.ASCII.GetBytes("ConPED"), 0, 6);
             byte[] receiveBuffer = new byte[4];
             connectionStream.Read(receiveBuffer, 0, 4);
             int dataServerPort = BitConverter.ToInt32(receiveBuffer, 0);
-            dataServer.Connect("localhost", dataServerPort);
+            dataServer.Connect(ipAdress, dataServerPort);
             dataStream = dataServer.GetStream();
             isConnected = true;
             //IPEndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);

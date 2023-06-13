@@ -26,7 +26,7 @@ namespace TramProcess
 {
     public class TramProcess
     {
-
+        private string ipAdress = "FILL IN";
         private TcpClient connectionServer = new TcpClient();
         private TcpClient dataServer = new TcpClient();
         private bool isConnected = false;
@@ -49,13 +49,13 @@ namespace TramProcess
         public void Start()
         {
 
-            connectionServer.Connect("localhost", 13131);
+            connectionServer.Connect(ipAdress, 13131);
             connectionStream = connectionServer.GetStream();
             connectionStream.Write(Encoding.ASCII.GetBytes("ConTRA"), 0, 6);
             byte[] receiveBuffer = new byte[4];
             connectionStream.Read(receiveBuffer, 0, 4);
             int dataServerPort = BitConverter.ToInt32(receiveBuffer, 0);
-            dataServer.Connect("localhost", dataServerPort);
+            dataServer.Connect(ipAdress, dataServerPort);
             dataStream = dataServer.GetStream();
             isConnected = true;
             byte[] startingPosBuffer = new byte[sizeof(int)];
