@@ -27,9 +27,8 @@ namespace TramProcess
     public class TramProcess
     {
 
-        private UdpClient connectionServer = new UdpClient();
-        private UdpClient dataServer = new UdpClient();
-        private IPEndPoint dataServerEndPoint;
+        private TcpClient connectionServer = new TcpClient();
+        private TcpClient dataServer = new TcpClient();
         private bool isConnected = false;
         public Point position;
         public float speed = 300; //default speed
@@ -45,22 +44,27 @@ namespace TramProcess
         private List<Point> nextDest1;
         private List<Point> nextDest2;
         private bool isGoing = true;
+        private NetworkStream connectionStream;
+        private NetworkStream dataStream;
         public void Start()
         {
 
-            Console.WriteLine("Siema");
             connectionServer.Connect("localhost", 13131);
-            connectionServer.Send(Encoding.ASCII.GetBytes("ConTRA"), 6);
-            dataServerEndPoint = new IPEndPoint(IPAddress.Any, 0);
-            var port = connectionServer.Receive(ref dataServerEndPoint);
-            dataServerEndPoint.Port = BitConverter.ToInt32(port, 0);
-            dataServer.Connect(dataServerEndPoint);
+            connectionStream = connectionServer.GetStream();
+            connectionStream.Write(Encoding.ASCII.GetBytes("ConTRA"), 0, 6);
+            byte[] receiveBuffer = new byte[4];
+            connectionStream.Read(receiveBuffer, 0, 4);
+            int dataServerPort = BitConverter.ToInt32(receiveBuffer, 0);
+            dataServer.Connect("localhost", dataServerPort);
+            dataStream = dataServer.GetStream();
             isConnected = true;
-            IPEndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);
-            byte[] startingPos = connectionServer.Receive(ref endPoint);
-            int xPos = BitConverter.ToInt32(startingPos, 0);
-            int yPos = BitConverter.ToInt32(startingPos, sizeof(int)); 
-            int xSpeed = BitConverter.ToInt32(startingPos, 2 * sizeof(int));
+            byte[] startingPosBuffer = new byte[sizeof(int)];
+            dataStream.Read(startingPosBuffer, 0, sizeof(int));
+            int xPos = BitConverter.ToInt32(startingPosBuffer);
+            dataStream.Read(startingPosBuffer, 0, sizeof(int));
+            int yPos = BitConverter.ToInt32(startingPosBuffer);
+            dataStream.Read(startingPosBuffer, 0, sizeof(int));
+            int xSpeed = BitConverter.ToInt32(startingPosBuffer);
             position = new Point(xPos, yPos);
             speedVect = new Vector2(xSpeed, 0);
             speed = Math.Max(200, 0);
@@ -85,7 +89,7 @@ namespace TramProcess
             Buffer.BlockCopy(Encoding.ASCII.GetBytes("POS"), 0, newPos, 0, 3);
             Buffer.BlockCopy(BitConverter.GetBytes(position.X), 0, newPos, 3, sizeof(int));
             Buffer.BlockCopy(BitConverter.GetBytes(position.Y), 0, newPos, 3 + sizeof(int), sizeof(int));
-            dataServer.Send(newPos, newPos.Length);
+            dataStream.Write(newPos, 0, newPos.Length);
         }
 
         private void init()

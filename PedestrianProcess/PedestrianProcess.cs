@@ -42,19 +42,22 @@ namespace PedestrianProcess
         //private Tram[] trams;
 
 
-        private UdpClient connectionServer = new UdpClient();
-        private UdpClient dataServer = new UdpClient();
-        private IPEndPoint dataServerEndPoint;
+        private TcpClient connectionServer = new TcpClient();
+        private TcpClient dataServer = new TcpClient();
         private bool isConnected = false;
+        private NetworkStream connectionStream;
+        private NetworkStream dataStream;
         public void Start()
         {
             Deserialize();
             connectionServer.Connect("localhost", 13131);
-            connectionServer.Send(Encoding.ASCII.GetBytes("ConPED"), 6);
-            dataServerEndPoint = new IPEndPoint(IPAddress.Any, 0);
-            var port = connectionServer.Receive(ref dataServerEndPoint);
-            dataServerEndPoint.Port = BitConverter.ToInt32(port, 0);
-            dataServer.Connect(dataServerEndPoint);
+            connectionStream = connectionServer.GetStream();
+            connectionStream.Write(Encoding.ASCII.GetBytes("ConPED"), 0, 6);
+            byte[] receiveBuffer = new byte[4];
+            connectionStream.Read(receiveBuffer, 0, 4);
+            int dataServerPort = BitConverter.ToInt32(receiveBuffer, 0);
+            dataServer.Connect("localhost", dataServerPort);
+            dataStream = dataServer.GetStream();
             isConnected = true;
             //IPEndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);
             //byte[] startingPos = connectionServer.Receive(ref endPoint);
@@ -79,9 +82,9 @@ namespace PedestrianProcess
                 Buffer.BlockCopy(BitConverter.GetBytes(pedestrians[i].position.X), 0, bytes,3+i * 2 * sizeof(int), sizeof(int));
                 Buffer.BlockCopy(BitConverter.GetBytes(pedestrians[i].position.Y), 0, bytes, 3+i * 2 * sizeof(int) + sizeof(int), sizeof(int));
             }
-            dataServer.Send(bytes, bytes.Length);
-            IPEndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);
-            byte[] reply = connectionServer.Receive(ref endPoint);
+            connectionStream.Write(bytes, 0, bytes.Length);
+            //IPEndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);
+            //byte[] reply = connectionServer.Receive(ref endPoint);
             Run();
             Console.WriteLine("Success");
             //Move();
@@ -222,9 +225,11 @@ namespace PedestrianProcess
                         Buffer.BlockCopy(BitConverter.GetBytes(pedestrians[i].position.X), 0, bytes, 3+i*2*sizeof(int), sizeof(int));
                         Buffer.BlockCopy(BitConverter.GetBytes(pedestrians[i].position.Y), 0, bytes, 3+i * 2 * sizeof(int) + sizeof(int), sizeof(int));
                     }
-                    dataServer.Send(bytes, bytes.Length);
+                    dataStream.Write(bytes, 0, bytes.Length);
                     IPEndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);
-                    byte[] reply = connectionServer.Receive(ref endPoint);
+                    byte[] reply = new byte[pedestrianCount];
+                    dataStream.Read(reply, 0, reply.Length);
+                    //byte[] reply = connectionServer.Receive(ref endPoint);
                     string message = Encoding.ASCII.GetString(reply);
                     for (int i = 0; i < pedestrianCount; i++)
                     {
@@ -238,7 +243,7 @@ namespace PedestrianProcess
                         Buffer.BlockCopy(BitConverter.GetBytes(pedestrians[i].nextJunction.X), 0, nextJun, 3 + i * 2 * sizeof(int), sizeof(int));
                         Buffer.BlockCopy(BitConverter.GetBytes(pedestrians[i].nextJunction.Y), 0, nextJun, 3 + i * 2 * sizeof(int) + sizeof(int), sizeof(int));
                     }
-                    dataServer.Send(nextJun, nextJun.Length);
+                    dataStream.Write(nextJun, 0, nextJun.Length);
                 }
             }
             catch (ThreadInterruptedException)

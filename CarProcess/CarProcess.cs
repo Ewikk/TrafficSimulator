@@ -29,43 +29,48 @@ namespace CarProcess
 {
     public class CarProcess
     {
-
-        private UdpClient connectionServer = new UdpClient();
-        private UdpClient dataServer = new UdpClient();
-        private IPEndPoint dataServerEndPoint;
+        private TcpClient connectionServer = new TcpClient();
+        private TcpClient dataServer = new TcpClient();
         private bool isConnected = false;
         private Dictionary<Point, Dictionary<Point, List<Point>>> roadPaths;
+        private NetworkStream connectionStream;
+        private NetworkStream dataStream;
         public void Start()
         {
             using (XmlReader reader = XmlReader.Create(new StreamReader("../../../../roadPaths.xml")))
             {
                 var serializer = new ConfigurationContainer()
-              .UseOptimizedNamespaces() //If you want to have all namespaces in root element
-              .Create();
+                  .UseOptimizedNamespaces()
+                  .Create();
                 roadPaths = (Dictionary<Point, Dictionary<Point, List<Point>>>)serializer.Deserialize(reader);
             }
+
             connectionServer.Connect("localhost", 13131);
-            connectionServer.Send(Encoding.ASCII.GetBytes("ConCAR"), 6);
-            dataServerEndPoint = new IPEndPoint(IPAddress.Any, 0);
-            var port = connectionServer.Receive(ref dataServerEndPoint);
-            dataServerEndPoint.Port = BitConverter.ToInt32(port, 0);
-            dataServer.Connect(dataServerEndPoint);
+            connectionStream = connectionServer.GetStream();
+            connectionStream.Write(Encoding.ASCII.GetBytes("ConCAR"), 0, 6);
+            byte[] receiveBuffer = new byte[4];
+            connectionStream.Read(receiveBuffer, 0, 4);
+            int dataServerPort = BitConverter.ToInt32(receiveBuffer, 0);
+
+            dataServer.Connect("localhost", dataServerPort);
+            dataStream = dataServer.GetStream();
+
             isConnected = true;
-            IPEndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);
-            byte[] startingPos = connectionServer.Receive(ref endPoint);
+
+            byte[] startingPos = new byte[8];
+            dataStream.Read(startingPos, 0, 8);
             int xPos = BitConverter.ToInt32(startingPos, 0);
-            int yPos = BitConverter.ToInt32(startingPos, sizeof(int));
+            int yPos = BitConverter.ToInt32(startingPos, 4);
             position = new Point(xPos, yPos);
-            IPEndPoint endPoint1 = new IPEndPoint(IPAddress.Any, 0);
-            byte[] destination = connectionServer.Receive(ref endPoint1);
+
+            byte[] destination = new byte[8];
+            dataStream.Read(destination, 0, 8);
             xPos = BitConverter.ToInt32(destination, 0);
-            yPos = BitConverter.ToInt32(destination, sizeof(int));
+            yPos = BitConverter.ToInt32(destination, 4);
             setDestination(new Point(xPos, yPos));
-            
 
             Console.WriteLine("Success");
             Move();
-            //Task.Factory.StartNew(ReceivePrintData);
         }
 
         public int turn;
@@ -94,15 +99,18 @@ namespace CarProcess
             path = new Queue<Point>(roadPaths[position][dest]);
             path.Dequeue();
             nextJunction = path.Dequeue();
-            IPEndPoint endPoint1 = new IPEndPoint(IPAddress.Any, 0);
-            byte[] nextJun = new byte[2 * sizeof(int) + 3];
+
+            NetworkStream dataStream = dataServer.GetStream();
+
+            byte[] nextJun = new byte[12];
             Buffer.BlockCopy(Encoding.ASCII.GetBytes("NEJ"), 0, nextJun, 0, 3);
-            Buffer.BlockCopy(BitConverter.GetBytes(nextJunction.X), 0, nextJun, 3, sizeof(int));
-            Buffer.BlockCopy(BitConverter.GetBytes(nextJunction.Y), 0, nextJun, 3 + sizeof(int), sizeof(int));
-            dataServer.Send(nextJun, nextJun.Length);
+            Buffer.BlockCopy(BitConverter.GetBytes(nextJunction.X), 0, nextJun, 3, 4);
+            Buffer.BlockCopy(BitConverter.GetBytes(nextJunction.Y), 0, nextJun, 7, 4);
+            dataStream.Write(nextJun, 0, nextJun.Length);
+
             speedVect = new Vector2(Math.Sign(nextJunction.X - position.X) * speed, Math.Sign(nextJunction.Y - position.Y) * speed);
-            //rotate();
         }
+
 
         public int distance(Point p1, Point p2)
         {
@@ -112,21 +120,24 @@ namespace CarProcess
 
         public void Move()
         {
+            Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
+
             while (true)
             {
                 Thread.Sleep(15);
+
                 stopwatch.Stop();
                 TimeSpan timeSpan = stopwatch.Elapsed;
-                double time;
-
-                time = timeSpan.TotalSeconds;
+                double time = timeSpan.TotalSeconds;
                 stopwatch.Restart();
                 stopwatch.Start();
+
                 int prevPosX = position.X;
                 int prevPosY = position.Y;
                 position.X += (int)(speedVect.X * time);
                 position.Y += (int)(speedVect.Y * time);
+
                 if (Math.Sign(prevPosX - nextJunction.X) != Math.Sign(position.X - nextJunction.X) ||
                     Math.Sign(prevPosY - nextJunction.Y) != Math.Sign(position.Y - nextJunction.Y))
                 {
@@ -136,15 +147,14 @@ namespace CarProcess
                         int distance = (int)(nextJunction - position).ToVector2().Length();
                         position = nextJunction;
                         nextJunction = path.Dequeue();
-                        IPEndPoint endPoint1 = new IPEndPoint(IPAddress.Any, 0);
-                        byte[] nextJun = new byte[2 * sizeof(int) + 3];
+
+                        byte[] nextJun = new byte[12];
                         Buffer.BlockCopy(Encoding.ASCII.GetBytes("NEJ"), 0, nextJun, 0, 3);
-                        Buffer.BlockCopy(BitConverter.GetBytes(nextJunction.X), 0, nextJun, 3, sizeof(int));
-                        Buffer.BlockCopy(BitConverter.GetBytes(nextJunction.Y), 0, nextJun, 3 + sizeof(int), sizeof(int));
-                        dataServer.Send(nextJun, nextJun.Length);
+                        Buffer.BlockCopy(BitConverter.GetBytes(nextJunction.X), 0, nextJun, 3, 4);
+                        Buffer.BlockCopy(BitConverter.GetBytes(nextJunction.Y), 0, nextJun, 7, 4);
+                        dataStream.Write(nextJun, 0, nextJun.Length);
+
                         speedVect = new Vector2(Math.Sign(nextJunction.X - position.X) * speed, Math.Sign(nextJunction.Y - position.Y) * speed);
-                        //rotate();
-                        //setTurn();
 
                         if (position.X != nextJunction.X)
                         {
@@ -161,38 +171,51 @@ namespace CarProcess
                     }
                     catch
                     {
-                        dataServer.Send(Encoding.ASCII.GetBytes("DES"), 3);
-                        IPEndPoint endPoint1 = new IPEndPoint(IPAddress.Any, 0);
-                        byte[] newStartDest = connectionServer.Receive(ref endPoint1);
+                        dataStream.Write(Encoding.ASCII.GetBytes("DES"), 0, 3);
+
+                        byte[] newStartDest = new byte[16];
+                        dataStream.Read(newStartDest, 0, 16);
                         int startX = BitConverter.ToInt32(newStartDest, 0);
-                        int startY = BitConverter.ToInt32(newStartDest, sizeof(int));
-                        int endX = BitConverter.ToInt32(newStartDest, 2*sizeof(int));
-                        int endY = BitConverter.ToInt32(newStartDest, 3*sizeof(int));
+                        int startY = BitConverter.ToInt32(newStartDest, 4);
+                        int endX = BitConverter.ToInt32(newStartDest, 8);
+                        int endY = BitConverter.ToInt32(newStartDest, 12);
                         position.X = startX;
                         position.Y = startY;
                         setDestination(new Point(endX, endY));
 
-                        //position = startingPoints[rand.Next(startingPoints.Count)];
-                        // setDestination(endPoints[rand.Next(endPoints.Count)]);
                         turn = 0;
                     }
-                    
                 }
-                byte[] newPos = new byte[2 * sizeof(int)+3];
-                Buffer.BlockCopy(Encoding.ASCII.GetBytes("POS"), 0, newPos, 0, 3);
-                    Buffer.BlockCopy(BitConverter.GetBytes(position.X), 0, newPos, 3, sizeof(int));
-                    Buffer.BlockCopy(BitConverter.GetBytes(position.Y), 0, newPos, 3+sizeof(int), sizeof(int));
-                    dataServer.Send(newPos, newPos.Length);
-                    IPEndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);
-                    byte[] ans = connectionServer.Receive(ref endPoint);
-                    string reply = Encoding.ASCII.GetString(ans, 0, ans.Length);
-                    if (reply == "NO")
-                    {
-                        position.X = prevPosX; position.Y = prevPosY;
-                    }
-                    //rotate();
 
+                byte[] newPos = new byte[12];
+                Buffer.BlockCopy(Encoding.ASCII.GetBytes("POS"), 0, newPos, 0, 3);
+                Buffer.BlockCopy(BitConverter.GetBytes(position.X), 0, newPos, 3, 4);
+                Buffer.BlockCopy(BitConverter.GetBytes(position.Y), 0, newPos, 7, 4);
+                dataStream.Write(newPos, 0, newPos.Length);
+
+                byte[] ans = new byte[2];
+                int retries = 5;
+                string reply = "";
+                while (retries-- > 0)
+                {
+                    if (dataStream.DataAvailable)
+                    {
+                        dataStream.Read(ans, 0, 2);
+                        reply = Encoding.ASCII.GetString(ans, 0, ans.Length);
+                        break;
+                    }
+                    else Thread.Sleep(5);
+                }
+                if (retries == 0) reply = "NO";
+
+                if (reply == "NO")
+                {
+                    position.X = prevPosX;
+                    position.Y = prevPosY;
+                }
             }
         }
+
+
     }
 }
