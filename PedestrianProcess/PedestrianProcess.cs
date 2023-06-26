@@ -30,17 +30,15 @@ namespace PedestrianProcess
 {
     public class PedestrianProcess
     {
-        private string ipAdress = "FILL IN";
+        private string ipAdress = "localhost";
         private int pedestrianCount = 100;
         public Pedestrian[] pedestrians = null;
         private List<Point> startingPoints;
         private List<Point> endPoints;
         private Dictionary<Point, List<Point>> sidewalkStructure;
-        //private Dictionary<Point, Dictionary<Point, List<Point>>> sidewalkPaths;
         private Stopwatch stopwatch = new Stopwatch();
         private Vector2 Size = new Vector2(10, 10);
-        //private Dictionary<Point, TrafficLight> trafficLights;
-        //private Tram[] trams;
+
 
 
         private TcpClient connectionServer = new TcpClient();
@@ -60,36 +58,25 @@ namespace PedestrianProcess
             dataServer.Connect(ipAdress, dataServerPort);
             dataStream = dataServer.GetStream();
             isConnected = true;
-            //IPEndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);
-            //byte[] startingPos = connectionServer.Receive(ref endPoint);
-            //int xPos = BitConverter.ToInt32(startingPos, 0);
-            //int yPos = BitConverter.ToInt32(startingPos, sizeof(int));
-            //position = new Point(xPos, yPos);
-            //IPEndPoint endPoint1 = new IPEndPoint(IPAddress.Any, 0);
-            //byte[] destination = connectionServer.Receive(ref endPoint1);
-            //xPos = BitConverter.ToInt32(destination, 0);
-            //yPos = BitConverter.ToInt32(destination, sizeof(int));
-            //setDestination(new Point(xPos, yPos));
+
             SetupPedestrians();
             Point[] poses = new Point[pedestrianCount];
             for (int i = 0; i < pedestrianCount; i++)
             {
                 poses[i] = pedestrians[i].position;
             }
-            byte[] bytes = new byte[3+poses.Length * 2 * sizeof(int)];
+            byte[] bytes = new byte[3 + poses.Length * 2 * sizeof(int)];
             Buffer.BlockCopy(Encoding.ASCII.GetBytes("POS"), 0, bytes, 0, 3);
             for (int i = 0; i < pedestrianCount; i++)
             {
-                Buffer.BlockCopy(BitConverter.GetBytes(pedestrians[i].position.X), 0, bytes,3+i * 2 * sizeof(int), sizeof(int));
-                Buffer.BlockCopy(BitConverter.GetBytes(pedestrians[i].position.Y), 0, bytes, 3+i * 2 * sizeof(int) + sizeof(int), sizeof(int));
+                Buffer.BlockCopy(BitConverter.GetBytes(pedestrians[i].position.X), 0, bytes, 3 + i * 2 * sizeof(int), sizeof(int));
+                Buffer.BlockCopy(BitConverter.GetBytes(pedestrians[i].position.Y), 0, bytes, 3 + i * 2 * sizeof(int) + sizeof(int), sizeof(int));
             }
             connectionStream.Write(bytes, 0, bytes.Length);
-            //IPEndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);
-            //byte[] reply = connectionServer.Receive(ref endPoint);
+
             Run();
             Console.WriteLine("Success");
-            //Move();
-            //Task.Factory.StartNew(ReceivePrintData);
+
         }
 
         protected void Deserialize()
@@ -97,37 +84,25 @@ namespace PedestrianProcess
             using (XmlReader reader = XmlReader.Create(new StreamReader("../../../../sidewalkStructure.xml")))
             {
                 var serializer = new ConfigurationContainer()
-              .UseOptimizedNamespaces() //If you want to have all namespaces in root element
+              .UseOptimizedNamespaces()
               .Create();
                 sidewalkStructure = (Dictionary<Point, List<Point>>)serializer.Deserialize(reader);
             }
             using (XmlReader reader = XmlReader.Create(new StreamReader("../../../../sidewalkStartingPoints.xml")))
             {
                 var serializer = new ConfigurationContainer()
-              .UseOptimizedNamespaces() //If you want to have all namespaces in root element
+              .UseOptimizedNamespaces()
               .Create();
                 startingPoints = (List<Point>)serializer.Deserialize(reader);
             }
             using (XmlReader reader = XmlReader.Create(new StreamReader("../../../../sidewalkEndPoints.xml")))
             {
                 var serializer = new ConfigurationContainer()
-              .UseOptimizedNamespaces() //If you want to have all namespaces in root element
+              .UseOptimizedNamespaces()
               .Create();
                 endPoints = (List<Point>)serializer.Deserialize(reader);
             }
         }
-        //public PedestrianThread(int count, List<Point> startingPoints, List<Point> endPoints, Dictionary<Point, Dictionary<Point, List<Point>>> paths, Dictionary<Point, List<Point>> sidewalkStructure, Dictionary<Point, TrafficLight> trafficLights, Tram[] tram)
-        //{
-        //    pedestrianCount = count;
-        //    this.startingPoints = startingPoints;
-        //    this.endPoints = endPoints;
-        //    this.sidewalkStructure = sidewalkStructure;
-        //    this.trafficLights = trafficLights;
-        //    sidewalkPaths = paths;
-        //    pedestrians = new Pedestrian[pedestrianCount];
-        //    trams = tram;
-        //    SetupPedestrians();
-        //}
 
         private void SetupPedestrians()
         {
@@ -174,8 +149,7 @@ namespace PedestrianProcess
                     }
                     for (int i = 0; i < pedestrianCount; i++)
                     {
-                        //if (CollisionDetected(pedestrians[i], 10)) continue;
-                        //if (!isMoveAllowed(pedestrians[i], 5, trams)) continue;
+
                         int prevPosX = pedestrians[i].position.X;
                         int prevPosY = pedestrians[i].position.Y;
                         pedestrians[i].position.X += (int)(pedestrians[i].speedVect.X * time);
@@ -223,15 +197,16 @@ namespace PedestrianProcess
                     Buffer.BlockCopy(Encoding.ASCII.GetBytes("POS"), 0, bytes, 0, 3);
                     for (int i = 0; i < pedestrianCount; i++)
                     {
-                        Buffer.BlockCopy(BitConverter.GetBytes(pedestrians[i].position.X), 0, bytes, 3+i*2*sizeof(int), sizeof(int));
-                        Buffer.BlockCopy(BitConverter.GetBytes(pedestrians[i].position.Y), 0, bytes, 3+i * 2 * sizeof(int) + sizeof(int), sizeof(int));
+                        Buffer.BlockCopy(BitConverter.GetBytes(pedestrians[i].position.X), 0, bytes, 3 + i * 2 * sizeof(int), sizeof(int));
+                        Buffer.BlockCopy(BitConverter.GetBytes(pedestrians[i].position.Y), 0, bytes, 3 + i * 2 * sizeof(int) + sizeof(int), sizeof(int));
                     }
                     dataStream.Write(bytes, 0, bytes.Length);
                     IPEndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);
-                    byte[] reply = new byte[pedestrianCount];
-                    dataStream.Read(reply, 0, reply.Length);
-                    //byte[] reply = connectionServer.Receive(ref endPoint);
-                    string message = Encoding.ASCII.GetString(reply);
+                    byte[] ans = new byte[pedestrianCount];
+                    string message = "";
+                    dataStream.Read(ans, 0, pedestrianCount);
+                    message = Encoding.ASCII.GetString(ans, 0, ans.Length);
+
                     for (int i = 0; i < pedestrianCount; i++)
                     {
                         if (message[i] == 'N')

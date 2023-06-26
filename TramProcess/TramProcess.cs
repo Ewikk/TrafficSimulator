@@ -26,7 +26,7 @@ namespace TramProcess
 {
     public class TramProcess
     {
-        private string ipAdress = "FILL IN";
+        private string ipAdress = "localhost";
         private TcpClient connectionServer = new TcpClient();
         private TcpClient dataServer = new TcpClient();
         private bool isConnected = false;
@@ -179,7 +179,6 @@ namespace TramProcess
 
                 stopwatch.Stop();
 
-                //double time = stopwatch.Elapsed.TotalSeconds;
                 double time = 0.03;
 
 

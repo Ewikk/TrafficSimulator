@@ -20,19 +20,17 @@ namespace TrafficSimulator
     {
         public int turn;
         public Point position;
-        public float speed = 200; //default speed
+        public float speed = 200;
         public Vector2 speedVect;
         public Point destination;
         public Point nextJunction;
         public bool outOfMap;
-        //WHY THE FUCK IS SIZE A POINT?
         public Point Size;
         public Color color = Color.Blue;
         private Stopwatch stopwatch = new Stopwatch();
 
 
-        //TEMP
-        public List<Car> cars;
+        private List<Car> cars;
 
 
 
@@ -91,7 +89,6 @@ namespace TrafficSimulator
             setNextJunction(path.Dequeue());
             speedVect = new Vector2(Math.Sign(nextJunction.X - position.X) * speed, Math.Sign(nextJunction.Y - position.Y) * speed);
             rotate();
-            //setTurn();
         }
 
         public void setNextJunction(Point nextJunction)
@@ -100,7 +97,6 @@ namespace TrafficSimulator
             this.nextJunction = nextJunction;
             speedVect = new Vector2(Math.Sign(nextJunction.X - position.X) * speed, Math.Sign(nextJunction.Y - position.Y) * speed);
             rotate();
-           // setTurn();
         }
 
         public void setPath(List<Point> path)
@@ -108,6 +104,10 @@ namespace TrafficSimulator
             this.path = new Queue<Point>(path);
         }
 
+        public void setCars(List<Car> cars)
+        {
+            this.cars = cars;
+        }
 
         public void rotate()
         {
@@ -129,115 +129,9 @@ namespace TrafficSimulator
         }
 
 
-        public void Move(Dictionary<Point, List<Point>> roadStructure, List<Point> startingPoints, List<Point> endPoints, Dictionary<Point, TrafficLight>[] trafficLights, List<Tram> tram, PedestrianThread pedestrianManager)
-        {
-            try
-            {
-                //Console.WriteLine(tram[0].position.ToString());
-                while (true)
-                {
-                    stopwatch.Stop();
-                    TimeSpan timeSpan = stopwatch.Elapsed;
-                    double time;
-                    //if (Debugger.IsAttached)
-                    //{
-                    //    time = 0.05;
-                    //}
-                    //else
-                    //{
-                        time = timeSpan.TotalSeconds;
-                    //}
-                    stopwatch.Restart();
-                    stopwatch.Start();
-                    if (!IsMoveAllowed(trafficLights, roadStructure, tram, pedestrianManager))
-                    {
-                        Thread.Sleep(50);
-                        continue;
-                    }
 
-                    int prevPosX = position.X;
-                    int prevPosY = position.Y;
-                    position.X += (int)(speedVect.X * time);
-                    position.Y += (int)(speedVect.Y * time);
-                    /*foreach (Car car in cars)
-                    {
-                        if (this != car)
-                        {
-                            // potrzeba wprowadzenia samefarow, czsami 2 samochody znikaja jednoczesnie
-                            if ((this.position.X + this.Size.X / 2 <= car.position.X + car.Size.X / 2 &&
-                                this.position.X + this.Size.X / 2 >= car.position.X - car.Size.X / 2 &&
-                                this.position.Y + this.Size.Y / 2 <= car.position.Y + car.Size.Y / 2 &&
-                                this.position.Y + this.Size.Y / 2 >= car.position.Y - car.Size.Y / 2)
-                                ||
-                                (this.position.X - this.Size.X / 2 <= car.position.X + car.Size.X / 2 &&
-                                this.position.X - this.Size.X / 2 >= car.position.X - car.Size.X / 2 &&
-                                this.position.Y - this.Size.Y / 2 <= car.position.Y + car.Size.Y / 2 &&
-                                this.position.Y - this.Size.Y / 2 >= car.position.Y - car.Size.Y / 2))
-                            {
-                                Console.WriteLine("kraksa");
-                                position = posCopy;
-                                destination = posCopy;
+        public bool IsMoveAllowed(Dictionary<Point, TrafficLight>[] trafficLights, Dictionary<Point, List<Point>> roadStructure, List<Tram> trams, PedestrianContainer pedestrianManager)
 
-                                Random rand = new Random();
-
-                                List<Point> listOfNextDest = roadStructure[destination];
-                                nextJunction = listOfNextDest[rand.Next(0, listOfNextDest.Count())];
-                                setTurn();
-
-                                speedVect = speedVectCopy;
-                                rotate();
-                                break;
-                            }
-                        }
-                    }*/
-
-
-                    if (Math.Sign(prevPosX - nextJunction.X) != Math.Sign(position.X - nextJunction.X) ||
-                        Math.Sign(prevPosY - nextJunction.Y) != Math.Sign(position.Y - nextJunction.Y))
-                    {
-                        Random rand = new Random();
-                        try
-                        {
-                            int distance = (int)(nextJunction - position).ToVector2().Length();
-                            position = nextJunction;
-                            nextJunction = path.Dequeue();
-                            speedVect = new Vector2(Math.Sign(nextJunction.X - position.X) * speed, Math.Sign(nextJunction.Y - position.Y) * speed);
-                            rotate();
-                            setTurn();
-
-                            if (position.X != nextJunction.X)
-                            {
-                                speedVect.X = Math.Sign(nextJunction.X - position.X) * speed;
-                                position.X += Math.Sign(nextJunction.X - position.X) * distance;
-                                speedVect.Y = 0;
-                            }
-                            else
-                            {
-                                speedVect.X = 0;
-                                speedVect.Y = Math.Sign(nextJunction.Y - position.Y) * speed;
-                                position.Y += Math.Sign(nextJunction.Y - position.Y) * distance;
-                            }
-                        }
-                        catch
-                        {
-                            position = startingPoints[rand.Next(startingPoints.Count)];
-                            setDestination(endPoints[rand.Next(endPoints.Count)]);
-                            turn = 0;
-                        }
-                        rotate();
-                    }
-                    Thread.Sleep(15);
-                }
-            }
-            catch (ThreadInterruptedException)
-            {
-                return;
-            }
-        }
-//POPIERDOLI MNIE OD TYCH POLSKICH NAZW,
-        //CO TY MADAJCZAK JESTES?
-        public bool IsMoveAllowed(Dictionary<Point, TrafficLight>[] trafficLights, Dictionary<Point, List<Point>> roadStructure, List<Tram> trams, PedestrianThread pedestrianManager)
-        
         {
             List<Point> rownorzedne = new List<Point>();
             rownorzedne.Add(new Point(1289, 617));
@@ -274,19 +168,18 @@ namespace TrafficSimulator
         }
 
 
-        //TO DO
-        private bool isPedestrianAhead(PedestrianThread pedestrianManager)
+        private bool isPedestrianAhead(PedestrianContainer pedestrianManager)
         {
-            foreach(Pedestrian pedestrian in pedestrianManager.pedestrians)
+            foreach (Pedestrian pedestrian in pedestrianManager.pedestrians)
             {
                 if ((distance(position, pedestrian.position) < 55 && distance(position, pedestrian.position) > 10 && speedVect.X != 0 && Math.Sign(speedVect.X) == Math.Sign(pedestrian.position.X - position.X) && Math.Abs(pedestrian.position.Y - position.Y) < 20)
-                ||(distance(position, pedestrian.position) < 55 && distance(position, pedestrian.position) > 10 && speedVect.Y != 0 && Math.Sign(speedVect.Y) == Math.Sign(pedestrian.position.Y - position.Y) && Math.Abs(pedestrian.position.X - position.X) < 20))
+                || (distance(position, pedestrian.position) < 55 && distance(position, pedestrian.position) > 10 && speedVect.Y != 0 && Math.Sign(speedVect.Y) == Math.Sign(pedestrian.position.Y - position.Y) && Math.Abs(pedestrian.position.X - position.X) < 20))
                     return true;
             }
             return false;
         }
 
-        private bool ClosetoTram(int distanceBetweenCars, List<Tram> trams )
+        private bool ClosetoTram(int distanceBetweenCars, List<Tram> trams)
         {
             int lowerTracksY = 455;
             int upperTracksY = 406;
@@ -299,8 +192,7 @@ namespace TrafficSimulator
                         continue;
                     Point dis = distancePoint(this, position, car);
                     if (dis.Y < Size.Y + Size.Y / 2 + 80 && dis.Y >= 0 && dis.X == 0)
-                        return true ;
-                    //return beforeTram(distanceBetweenCars, trams);
+                        return true;
                 }
             }
             else if (speedVect.Y > 0 && position.Y < upperTracksY - Size.Y / 2 + 35 + distanceBetweenCars && position.Y + 35 + distanceBetweenCars > upperTracksY - Size.Y / 2)
@@ -312,9 +204,8 @@ namespace TrafficSimulator
                     Point dis = distancePoint(this, position, car);
                     if (dis.Y < Size.Y + Size.Y / 2 + 90 + distanceBetweenCars && dis.Y >= 0 && dis.X == 0)
                         return true;
-                    //return beforeTram(distanceBetweenCars, trams);
                 }
-                 
+
             }
             return beforeTram(distanceBetweenCars, trams);
         }
@@ -326,7 +217,6 @@ namespace TrafficSimulator
                 double sp = 0;
                 int ownPos = 0;
                 int pos2 = 0;
-                //TO simplify
                 if (speedVect.Y != 0 && Math.Abs(tram.position.X - position.X) < tram.Size.X / 2 + this.Size.X / 2)
                 {
                     sp = speedVect.Y;
@@ -394,7 +284,6 @@ namespace TrafficSimulator
                 double sp = 0;
                 int ownPos = 0;
                 int pos2 = 0;
-                //TO simplify
                 bool collison = false;
                 if (speedVect.X != 0 && Math.Abs(car.position.Y - position.Y) < car.Size.Y / 2 + this.Size.Y / 2)
                 {
@@ -421,8 +310,6 @@ namespace TrafficSimulator
                     }
                 }
 
-
-                //WOW SLOW DOWN COWBOY
                 if (collison)
                 {
                     if ((this.position.X + this.Size.X / 2 < car.position.X + car.Size.X / 2 &&
@@ -435,8 +322,7 @@ namespace TrafficSimulator
                                 this.position.Y - this.Size.Y / 2 < car.position.Y + car.Size.Y / 2 &&
                                 this.position.Y - this.Size.Y / 2 > car.position.Y - car.Size.Y / 2))
                     {
-                        //Console.WriteLine("kraksa");
-                        //collison = false;
+
                     }
                     return collison;
                 }
@@ -445,7 +331,6 @@ namespace TrafficSimulator
             return false;
         }
 
-        //must be a better way to do this//just cosmetic
         public void setTurn()
         {
             turn = 0;
@@ -501,7 +386,6 @@ namespace TrafficSimulator
 
         public Point distancePoint(Car car, Point point, Car nextCar)
         {
-            //Point(z boku, z frontu)
             int x = 0;
             int y = 0;
             if (car.speedVect.X > 0)

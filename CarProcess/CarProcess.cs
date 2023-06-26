@@ -29,7 +29,7 @@ namespace CarProcess
 {
     public class CarProcess
     {
-        private string ipAdress = "FILL IN";
+        private string ipAdress = "localhost";
         private TcpClient connectionServer = new TcpClient();
         private TcpClient dataServer = new TcpClient();
         private bool isConnected = false;
@@ -84,13 +84,6 @@ namespace CarProcess
         public Point Size;
         public Color color = Color.Blue;
         private Stopwatch stopwatch = new Stopwatch();
-
-        //private void init()
-        //{
-        //    outOfMap = false;
-        //    stopwatch.Start();
-        //    rotate();
-        //}
 
         private Queue<Point> path;
 
