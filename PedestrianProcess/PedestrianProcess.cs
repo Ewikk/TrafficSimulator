@@ -30,7 +30,7 @@ namespace PedestrianProcess
 {
     public class PedestrianProcess
     {
-        private string ipAdress = "localhost";
+        private string ipAdress = "FILL IN";
         private int pedestrianCount = 100;
         public Pedestrian[] pedestrians = null;
         private List<Point> startingPoints;

@@ -26,7 +26,7 @@ namespace TramProcess
 {
     public class TramProcess
     {
-        private string ipAdress = "localhost";
+        private string ipAdress = "FILL IN";
         private TcpClient connectionServer = new TcpClient();
         private TcpClient dataServer = new TcpClient();
         private bool isConnected = false;
